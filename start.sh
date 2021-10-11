@@ -6,41 +6,87 @@ set_git(){
 set_cert(){
 # Check and update ca-certificates
 if (! update-ca-certificates ); then 
-    apt-get install -y -qq --no-install-recommends --no-install-suggests ca-certificates;
+    apt-get update && apt-get -y upgrade && apt-get install -y -qq --no-install-recommends --no-install-suggests ca-certificates;
 fi
 }
-
 set_curl(){
 # Check your `curl` version
 if (! curl --version ); then 
-    apt-get install -y -qq --no-install-recommends --no-install-suggests curl;
+    apt-get update && apt-get -y upgrade && apt-get install -y -qq --no-install-recommends --no-install-suggests curl;
+fi
+}
+set_unzip(){
+if (! unzip --version ); then 
+    apt-get update && apt-get -y upgrade && apt-get install -y -qq --no-install-recommends --no-install-suggests unzip;
+fi
+}
+set_wget(){
+if (! wget --version ); then 
+    apt-get update && apt-get -y upgrade && apt-get install -y -qq --no-install-recommends --no-install-suggests wget;
+fi
+}
+set_helm3(){
+# v3.2.0++
+if ( ! helm version ); then 
+    set_cert
+    set_curl 
+
+    mkdir helm3
+    cd helm3
+    curl -LO https://get.helm.sh/helm-v3.7.0-linux-amd64.tar.gz
+    tar -zxvf helm-v3.7.0-linux-amd64.tar.gz
+    chmod +x ./helm
+    export PATH=$PATH:$PWD
+    cd ..
 fi
 }
 
-# set_nvm(){
-    # set_cert
-    # git clone https://github.com/nvm-sh/nvm.git .nvm
-    # cd .nvm
-    # git checkout v0.38.0
-    # export NVM_DIR=$PWD/.nvm 
-    # [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-    # [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion”
-# }
-
-set_gradlew(){
-	set_cert
-  apt-get install -y -qq --no-install-recommends --no-install-suggests wget unzip
-  wget https://services.gradle.org/distributions/gradle-5.5.1-all.zip && unzip -d gradle gradle-5.5.1-all.zip
-  # find ~/.gradle -type f -name "*.lock" -delete
-	# rm -rf .gradle/caches
+set_kind_config(){
+    https://raw.githubusercontent.com/kubernetes-sigs/kind/main/site/content/docs/user/kind-example-config.yaml
+    https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy/kind/kind-cluster.yaml
+    # for multi-node cluster
+    echo '# three node (two workers) cluster config
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80
+    # listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
+    # protocol: udp # Optional, defaults to tcp
+- role: worker
+  extraPortMappings:
+    - hostPort: 31001
+      containerPort: 31001
+## add one more control-plane node & worker
+# - role: control-plane
+# - role: worker
+' > kind-example-config.yaml
 }
 
-# nvm install node
-# $  wget https://github.com/apache/openwhisk-cli/releases/download/1.2.0/OpenWhisk_CLI-1.2.0-linux-amd64.tgz && tar -xvzf OpenWhisk_CLI-1.2.0-linux-amd64.tgz
-# $  export PATH=”$PWD:$PATH”
-# Install xdg-open by npm
-# $  npm install --global opn
+set_kind(){
+    # not recommended for production deployments of OpenWhisk
+    # https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-kind.md
+    # assumes that port 31001 #deploy/kind/kind-cluster.yaml
 
+    # https://github.com/kubernetes-sigs/kind/releases
+    # curl https://github.com/kubernetes-sigs/kind/releases/download/v0.11.1/kind-linux-amd64 -o KIND
+
+    mkdir KIND
+    cd KIND
+    set_kind_config
+    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.11.1/kind-linux-amd64
+    chmod +x ./kind
+    # mv ./kind /usr/local/bin/kind
+    export PATH=$PATH:$PWD
+    cd ..
+    
+    cluster_name=cluster0 # cluster names must match `^[a-z0-9.-]+$`
+    kind create cluster --name $cluster_name --config kind-example-config.yaml # --image=... # --wait 30s 
+    # kind get clusters
+    kubectl cluster-info --context kind-$cluster_name
+    
 set_mycluster(){
 # create a default mycluster.yaml for a single worker node
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy
@@ -73,52 +119,34 @@ invoker:
 # ' > mycluster.yaml
 }
 
-set_helm3(){
-if ( ! helm version ); then 
-	set_cert
-	set_curl
-	curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-	chmod 700 get_helm.sh
-	./get_helm.sh
-	rm get_helm.sh;
-	# -------- or ----------
-	# download 
-	# tar -zxvf helm-v3.0.0-linux-amd64.tar.gz
-	# mkdir /usr/local/bin/helm
-	# mv linux-amd64/helm /usr/local/bin/helm
-	# -------- or ----------
-	# curl https://baltocdn.com/helm/signing.asc | apt-key add -
-	# apt-get install apt-transport-https --yes
-	# echo "deb https://baltocdn.com/helm/stable/debian/ all main" | tee /etc/apt/sources.list.d/helm-stable-debian.list
-	# apt-get update
-	# apt-get install helm
-	# -------- or ----------
-	# set_git
-	# git clone https://github.com/helm/helm.git
-	# cd helm
-	# set_make
-	# make
-fi
+set_wsk_cli(){
+    if ( ! wsk -i );then 
+    # https://openwhisk.ng.bluemix.net/cli/go/download/
+    mkdir wsk
+    cd wsk
+    # wget https://openwhisk.ng.bluemix.net/cli/go/download/linux/amd64/OpenWhisk_CLI-linux.tgz 
+    wget https://openwhisk.ng.bluemix.net/cli/go/download/linux/amd64/wsk
+    chmod +x ./wsk
+    export PATH=$PATH:$PWD
+    cd ..;
+    fi
 }
 
-set_docker(){
-# ubuntu 20.04
-if ( ! docker --version ); then apt install docker.io -y; fi
-if ( ! systemctl status docker ); then systemctl enable docker; systemctl start docker; fi
+config_wsk_cli(){
+    # External to the Kubernetes cluster, using wsk cli
+    set_wsk_cli
+
+    apiHostName=localhost
+    apiHostPort=31001 ???
+    WHISK_SERVER=$apiHostName:$apiHostPort
+    WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
+    # To configure your wsk cli to connect to it, set the apihost property
+    wsk property set --apihost $WHISK_SERVER --auth $WHISK_AUTH # --namespace guest
+    wsk list -v
 }
 
 set_k8s(){
 # install k8s Kubernetes version 1.19+, kubelet's hairpin-mode must not be none: Endpoints of Kubernetes services must be able to loopback to themselves
-
-# '	# https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
-# 	set_curl;
-# 	curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl";
-# 	chmod +x kubectl;
-# 	mkdir -p ~/.local/bin/kubectl;
-# 	mv ./kubectl ~/.local/bin/kubectl;
-# 	# and then add ~/.local/bin/kubectl to $PATH
-# '
-
 # https://www.howtoforge.com/tutorial/how-to-install-kubernetes-on-ubuntu/
 # add a signing key in you on Ubuntu, adding a subscription key
 apt-get update && apt-get -y upgrade && apt-get install -y -qq --no-install-recommends --no-install-suggests gnupg apt-transport-https
@@ -149,53 +177,8 @@ hostnamectl set-hostname $master_node
 cidr=10.244.0.0/16
 kubeadm init --pod-network-cidr=$cidr
 
+kubectl get nodes
 
-# 'kubernets-master:~$ 
-#     mkdir -p $HOME/.kube
-#     cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-#     chown $(id -u):$(id -g) $HOME/.kube/config
-
-# https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/
-# '
-
-# kubectl apply -f <>
-# kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-# kubectl get pods --all-namespaces
-
-# '
-# # set as worker
-# hostnamectl set-hostname w1
-# kubeadm join 10.0.15.10:6443 --token daync8.5dcgj6c6xc7l8hay --discovery-token-ca-cert-hash sha256:65a3e69531d323c335613dea1e498656236bba22e6cf3d5c54b21d744ef97dcd
-# kubeadm join --discovery-token abcdef.1234567890abcdef --discovery token-ca-cert-hash sha256:1234..cdef 1.2.3.4:6443
-# kubectl get nodes
-# '
-}
-
-set_kind_config(){
-# for multi-node cluster
-echo '# two node (one workers) cluster config
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-nodes:
-- role: control-plane
-  extraPortMappings:
-  - containerPort: 80
-    hostPort: 80
-    # listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
-    # protocol: udp # Optional, defaults to tcp
-- role: worker
-  extraPortMappings:
-    - hostPort: 31001
-      containerPort: 31001
-' > kind-example-config.yaml
-}
-
-set_kind(){
-# not recommended for production deployments of OpenWhisk
-# https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-kind.md
-curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.11.1/kind-linux-amd64
-chmod +x ./kind
-mv ./kind /usr/local/bin/kind
 }
 
 redeploy(){
@@ -233,68 +216,32 @@ kind export logs $PWD --name $cluster_name
 }
 
 set_openwhisk(){
-set_k8s
+    set_k8s
+    set_helm3
+    # Deploy OpenWhisk with Helm
+    # add a chart repository
+    helm repo add openwhisk https://openwhisk.apache.org/charts
+    helm repo update
 
-set_helm3
+    set_mycluster
 
-# add a chart repository
-helm repo add openwhisk https://openwhisk.apache.org/charts
-helm repo update
-set_mycluster
+(deploy_k8s)
 
-deploy_k8s
+    owdev=??  #deployment name # Your named release
+    openwhisk=??  #namespace
+    # set $OPENWHISK_HOME to its top-level directory
+    export OPENWHISK_HOME=$PWD
+    set_kind
+    config_wsk_cli
+    helm install $owdev ./helm/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml
 
-if [ ! -n "$owdev" ]; then read -p "Your Deployment Name? :" owdev; fi
-if [ ! -n "$openwhisk" ]; then read -p "Your Namespace Name? :" openwhisk; fi
-helm install $owdev openwhisk/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml
-# -------- or ---------
-# git clone https://github.com/apache/openwhisk-deploy-kube.git
-# cd openwhisk-deploy-kube 
-# set_mycluster
-# helm install $owdev ./helm/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml
+    # Once the 'owdev-install-packages' Pod is in the `Completed` state, your OpenWhisk deployment is ready to be used.
+    # helm status $owdev -n $openwhisk
+    # kubectl get pods -n $openwhisk --watch
 
-echo 'check if install-packages is `Completed`'
-helm status $owdev -n $openwhisk
-kubectl get pods -n openwhisk --watch
-
-# default test
-# helm test $owdev -n $openwhisk
-}
-
-deploy_openwhisk(){
-	Deploy OpenWhisk with Helm
-	https://github.com/apache/openwhisk-deploy-kube/blob/master/README.md#deploy-with-helm
-
-# 	https://github.com/apache/openwhisk
-  git clone https://github.com/apache/openwhisk-deploy-kube.git
-# 	set $OPENWHISK_HOME to its top-level directory
-  cd openwhisk && export OPENWHISK_HOME=$PWD
-  
-  set_openwhisk
-}
-
-set_wsk_cli(){
-brew update
-brew install wsk
-# suppress certificate checking
-wsk -i
-}
-
-config_wsk_cli(){
-	# External to the Kubernetes cluster, using wsk cli
-	set_wsk_cli
-
-	# https://github.com/apache/openwhisk-deploy-kube/blob/master/README.md#configure-the-wsk-cli
-  if [ ! -n "$apiHostName" ]; then read -p "Your apiHostName? e.g. localhost :" apiHostName; fi
-  if [ ! -n "$apiHostPort" ]; then read -p "Your apiHostPort? e.g. 31001 :" apiHostPort; fi
-	WHISK_SERVER=$apiHostName:$apiHostPort
-	WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
-	wsk property set --apihost $WHISK_SERVER --auth $WHISK_AUTH --namespace guest
-
-	# WHISK_SERVER=`wsk property get --apihost`
-	# WHISK_AUTH=`wsk property get --auth`
-
-	# wsk cli stores the properties set in ~/.wskprops by default
+    # Once the deployment is ready, you can test it with 
+    # helm test $owdev -n $openwhisk --cleanup
+    cd ..
 }
 
 set_pyfile(){
