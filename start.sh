@@ -154,18 +154,18 @@ set_curl
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add # curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 
 if ( ! kubectl version --client ); then 
-        mkdir kubectl && cd kubectl
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x kubectl && export PATH=$PATH:$PWD && cd ..
+	# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+	RELEASE="$(curl -sSL https://dl.k8s.io/release/stable.txt)"
+	ARCH="amd64"
+	curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${RELEASE}/bin/linux/${ARCH}/{kubeadm,kubelet,kubectl}
+	chmod +x {kubeadm,kubelet,kubectl}
+	export PATH=$PATH:$PWD
+        #curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x kubectl && export PATH=$PATH:$PWD && cd ..
 	#apt-get update && apt-get -y upgrade && apt-get install software-properties-common python-software-properties # apt-get install apt-file && apt-file update -y # apt-file search add-apt-repository
 	#apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main" # sed -i -e '50d' /etc/apt/sources.list # sed -i '50s/\(.*\)/#\1/' /etc/apt/sources.list
 	#apt-get update && apt-get -y upgrade && apt-get install kubeadm kubelet kubectl # apt update && apt install -y kubeadm kubelet kubectl
 	#apt-mark hold kubeadm kubelet kubectl;
 fi
-
-# init k8s cluster
-cidr=10.244.0.0/16
-kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
-kubeadm version
 }
 
 deploy_k8s(){
@@ -176,11 +176,14 @@ swapoff –a
 # set as the master node
 if [ ! -n "$master_node" ]; then read -p "Your master_node Name? :" master_node; fi
 hostnamectl set-hostname $master_node
+
+# init k8s cluster
 cidr=10.244.0.0/16
 kubeadm init --pod-network-cidr=$cidr
+# kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
+
 
 kubectl get nodes
-
 }
 
 redeploy(){
