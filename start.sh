@@ -190,7 +190,7 @@ redeploy(){
 bin/wskdev controller -b
 ./gradlew distDocker
 set_stanza
-helm upgrade owdev ./helm/openwhisk -n openwhisk -f mycluster.yaml # using helm
+helm upgrade $owdev ./helm/openwhisk -n $openwhisk -f mycluster.yaml # using helm
 kind load docker-image whisk/controller # using kind
 }
 
