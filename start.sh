@@ -84,6 +84,7 @@ set_kind(){
     
     cluster_name=cluster0 # cluster names must match `^[a-z0-9.-]+$`
     kind create cluster --name $cluster_name --config kind-example-config.yaml # --image=... # --wait 30s 
+    # kind delete clusters $cluster_name
     # kind get clusters
     kubectl cluster-info --context kind-$cluster_name
     
