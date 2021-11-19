@@ -240,14 +240,16 @@ set_openwhisk(){
     owdev=??  #deployment name # Your named release
     openwhisk=??  #namespace
     # set $OPENWHISK_HOME to its top-level directory
-    export OPENWHISK_HOME=$PWD # openwhisk-deploy-kube/helm/openwhisk
+    export OPENWHISK_HOME=$PWD/openwhisk-deploy-kube
     
     config_wsk_cli
-    helm install $owdev $OPENWHISK_HOME -n $openwhisk --create-namespace -f mycluster.yaml
+    helm install $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml
+    # helm upgrade $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk -f mycluster.yaml 
+    # helm uninstall $owdev --namespace $openwhisk
 
     # Once the 'owdev-install-packages' Pod is in the `Completed` state, your OpenWhisk deployment is ready to be used.
-    # helm status $owdev -n $openwhisk
-    # kubectl get pods -n $openwhisk --watch
+    helm status $owdev -n $openwhisk
+    kubectl get pods -n $openwhisk --watch
 
     # Once the deployment is ready, you can test it with 
     # helm test $owdev -n $openwhisk --cleanup
