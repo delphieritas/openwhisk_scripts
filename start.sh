@@ -213,7 +213,6 @@ create_k8scluster(){
 	# kind load docker-image $docker_image_name_1 $docker_image_name_2 --name $cluster_name
 	set_stanza
 
-	# 'helm install'
 	# kubectl apply -f $my-manifest-using-my-image:$image_version
 	kind export logs $PWD --name $cluster_name
 
@@ -241,10 +240,10 @@ set_openwhisk(){
     owdev=??  #deployment name # Your named release
     openwhisk=??  #namespace
     # set $OPENWHISK_HOME to its top-level directory
-    export OPENWHISK_HOME=$PWD
+    export OPENWHISK_HOME=$PWD # openwhisk-deploy-kube/helm/openwhisk
     
     config_wsk_cli
-    helm install $owdev ./helm/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml
+    helm install $owdev $OPENWHISK_HOME -n $openwhisk --create-namespace -f mycluster.yaml
 
     # Once the 'owdev-install-packages' Pod is in the `Completed` state, your OpenWhisk deployment is ready to be used.
     # helm status $owdev -n $openwhisk
