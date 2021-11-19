@@ -81,11 +81,13 @@ set_kind(){
     export PATH=$PATH:$PWD
     cd ..
 }
-    
+
+# ???
 set_wskcluster(){
 # create a default mycluster.yaml for a single worker node
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy
 # https://github.com/apache/openwhisk-deploy-kube/issues/226
+# https://github.com/apache/openwhisk-deploy-kube/issues/311
 echo 'affinity:
   enabled: false
 toleration:
@@ -207,6 +209,9 @@ create_k8scluster(){
 	kubectl cluster-info --context kind-$cluster_name
 	kubectl get po -A  # kubectl get pods -n $openwhisk --watch
 	kubectl get nodes
+	kubectl get services -n kube-system
+	# kubectl logs owdev-init-couchdb-rcqp2 -n $openwhisk
+	# kubectl describe pod owdev-init-couchdb-2zhwh --namespace=$openwhisk
 
 	if [ ! -n "$docker_image_name_1" ]; then read -p "Your docker_image Name? :" docker_image_name_1; fi
 	kind load docker-image $docker_image_name_1 --name $cluster_name
@@ -263,6 +268,7 @@ def main(dict):
 ' > hello.py
 }
 
+# ???
 set_manifest(){
 echo '		packages:
 		    default:
@@ -281,6 +287,7 @@ invoke_wsk_cli(){
 # 	wsk action invoke helloPy --result --param name World
 }
 
+# ???
 set_stanza(){
 # If you are using Kubernetes in Docker, it is straightforward to deploy local images by adding a stanza to your mycluster.yaml. 
 echo '
