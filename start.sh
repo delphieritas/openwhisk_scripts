@@ -204,9 +204,8 @@ create_k8scluster(){
 	kind get clusters
 	# kind delete clusters $cluster_name
 	kubectl cluster-info --context kind-$cluster_name
-	kubectl get po -A
+	kubectl get po -A  # kubectl get pods -n $openwhisk --watch
 	kubectl get nodes
-	kind get clusters
 
 	if [ ! -n "$docker_image_name_1" ]; then read -p "Your docker_image Name? :" docker_image_name_1; fi
 	kind load docker-image $docker_image_name_1 --name $cluster_name
@@ -249,7 +248,7 @@ set_openwhisk(){
 
     # Once the 'owdev-install-packages' Pod is in the `Completed` state, your OpenWhisk deployment is ready to be used.
     helm status $owdev -n $openwhisk
-    kubectl get pods -n $openwhisk --watch
+    
 
     # Once the deployment is ready, you can test it with 
     # helm test $owdev -n $openwhisk --cleanup
