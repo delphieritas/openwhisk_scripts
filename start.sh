@@ -75,20 +75,14 @@ set_kind(){
 
     mkdir KIND
     cd KIND
-    set_kind_config
     curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.11.1/kind-linux-amd64
     chmod +x ./kind
     # mv ./kind /usr/local/bin/kind
     export PATH=$PATH:$PWD
     cd ..
+}
     
-    cluster_name=cluster0 # cluster names must match `^[a-z0-9.-]+$`
-    kind create cluster --name $cluster_name --config kind-example-config.yaml # --image=... # --wait 30s 
-    # kind delete clusters $cluster_name
-    # kind get clusters
-    kubectl cluster-info --context kind-$cluster_name
-    
-set_mycluster(){
+set_wskcluster(){
 # create a default mycluster.yaml for a single worker node
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy
 echo 'affinity:
@@ -161,6 +155,10 @@ if ( ! kubectl version --client ); then
 	curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${RELEASE}/bin/linux/${ARCH}/{kubeadm,kubelet,kubectl}
 	chmod +x {kubeadm,kubelet,kubectl}
 	export PATH=$PATH:$PWD
+        chown $(id -u):$(id -g) /etc/kubernetes/admin.conf
+        export KUBECONFIG=/etc/kubernetes/admin.conf  # https://k21academy.com/docker-kubernetes/the-connection-to-the-server-localhost8080-was-refused/
+        # export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        # echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> $HOME/.bashrc
         #curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x kubectl && export PATH=$PATH:$PWD && cd ..
 	#apt-get update && apt-get -y upgrade && apt-get install software-properties-common python-software-properties # apt-get install apt-file && apt-file update -y # apt-file search add-apt-repository
 	#apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main" # sed -i -e '50d' /etc/apt/sources.list # sed -i '50s/\(.*\)/#\1/' /etc/apt/sources.list
@@ -170,21 +168,18 @@ fi
 }
 
 deploy_k8s(){
-# In order to set up the Kubernetes Linux servers, disabling the swap memory on each server
-swapon -s
-swapoff –a
+	# In order to set up the Kubernetes Linux servers, disabling the swap memory on each server
+	swapon -s
+	swapoff –a
 
-# set as the master node
-if [ ! -n "$master_node" ]; then read -p "Your master_node Name? :" master_node; fi
-hostnamectl set-hostname $master_node
+	# set as the master node
+	if [ ! -n "$master_node" ]; then read -p "Your master_node Name? :" master_node; fi
+	hostnamectl set-hostname $master_node
 
-# init k8s cluster
-cidr=10.244.0.0/16
-kubeadm init --pod-network-cidr=$cidr
-# kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
-
-
-kubectl get nodes
+	# init k8s cluster
+	cidr=10.244.0.0/16
+	kubeadm init --pod-network-cidr=$cidr
+	# kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
 }
 
 redeploy(){
@@ -201,43 +196,54 @@ kind load docker-image whisk/controller # using kind
 }
 
 # (set_kind_config)
-create_cluster(){
-# ensure that Kubernetes is cloned in $(env PATH)/src/k8s.io/kubernetes
-if [ ! -n "$cluster_name" ]; then read -p "Your K8s Cluster Name? :" cluster_name; fi
-kind create cluster --name $cluster_name # --image=... # --wait 30s #--config kind-example-config.yaml
-kind get clusters
-kubectl cluster-info --context kind-$cluster_name
+create_k8scluster(){
+	# ensure that Kubernetes is cloned in $(env PATH)/src/k8s.io/kubernetes
+	if [ ! -n "$cluster_name" ]; then read -p "Your K8s Cluster Name? cluster names must match `^[a-z0-9.-]+\$`:" cluster_name; fi
+	# (set_kind_config)
+	kind create cluster --name $cluster_name #(--config kind-example-config.yaml) # --image=... --wait 30s 
+	kind get clusters
+	# kind delete clusters $cluster_name
+	kubectl cluster-info --context kind-$cluster_name
+	kubectl get po -A
+	kubectl get nodes
+	kind get clusters
 
-if [ ! -n "$docker_image_name_1" ]; then read -p "Your docker_image Name? :" docker_image_name_1; fi
-kind load docker-image $docker_image_name_1 --name $cluster_name
-# kind load docker-image $docker_image_name_1 $docker_image_name_2 --name $cluster_name
-set_stanza
+	if [ ! -n "$docker_image_name_1" ]; then read -p "Your docker_image Name? :" docker_image_name_1; fi
+	kind load docker-image $docker_image_name_1 --name $cluster_name
+	# kind load docker-image $docker_image_name_1 $docker_image_name_2 --name $cluster_name
+	set_stanza
 
-# 'helm install'
-# kubectl apply -f $my-manifest-using-my-image:$image_version
-# 'kind delete cluster'
-kind export logs $PWD --name $cluster_name
+	# 'helm install'
+	# kubectl apply -f $my-manifest-using-my-image:$image_version
+	# 'kind delete cluster'
+	kind export logs $PWD --name $cluster_name
 
-# must use the KubernetesContainerFactory when running OpenWhisk on kind
+	# must use the KubernetesContainerFactory when running OpenWhisk on kind
 }
 
 set_openwhisk(){
-    set_k8s
+    
     set_helm3
     # Deploy OpenWhisk with Helm
     # add a chart repository
     helm repo add openwhisk https://openwhisk.apache.org/charts
     helm repo update
 
-    set_mycluster
-
+    set_wskcluster
+    
+    set_kind
+    set_k8s
+    # (set_kind_config)
+    create_k8scluster
+    
+    
 (deploy_k8s)
 
     owdev=??  #deployment name # Your named release
     openwhisk=??  #namespace
     # set $OPENWHISK_HOME to its top-level directory
     export OPENWHISK_HOME=$PWD
-    set_kind
+    
     config_wsk_cli
     helm install $owdev ./helm/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml
 
