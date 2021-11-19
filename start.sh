@@ -215,7 +215,6 @@ create_k8scluster(){
 
 	# 'helm install'
 	# kubectl apply -f $my-manifest-using-my-image:$image_version
-	# 'kind delete cluster'
 	kind export logs $PWD --name $cluster_name
 
 	# must use the KubernetesContainerFactory when running OpenWhisk on kind
