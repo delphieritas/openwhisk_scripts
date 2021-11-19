@@ -85,6 +85,7 @@ set_kind(){
 set_wskcluster(){
 # create a default mycluster.yaml for a single worker node
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy
+# https://github.com/apache/openwhisk-deploy-kube/issues/226
 echo 'affinity:
   enabled: false
 toleration:
@@ -93,25 +94,25 @@ invoker:
   options: "-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false"
 ' > mycluster.yaml
 # -------- or ----------
-# echo 'whisk:
+# echo "whisk:
 #   ingress:
 #     type: NodePort
-#     apiHostName: localhost
-#     apiHostPort: 31001
+#     apiHostName: $apiHostName
+#     apiHostPort: $apiHostPort
 #     useInternally: false
 # nginx:
-#   httpsNodePort: 31001
+#   httpsNodePort: $apiHostPort
 # # disable affinity
 # affinity:
 #   enabled: false
 # toleration:
 #   enabled: false
 # invoker:
-#   options: "-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false"
+#   options: \"-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false\"
 #   # must use KCF as kind uses containerd as its container runtime
 #   containerFactory:
-#     impl: "kubernetes"
-# ' > mycluster.yaml
+#     impl: \"kubernetes\"
+# " > mycluster.yaml
 }
 
 set_wsk_cli(){
@@ -226,7 +227,6 @@ set_openwhisk(){
     helm repo add openwhisk https://openwhisk.apache.org/charts
     helm repo update
 
-    set_wskcluster
     
     set_kind
     set_k8s
@@ -242,6 +242,7 @@ set_openwhisk(){
     export OPENWHISK_HOME=$PWD/openwhisk-deploy-kube
     
     config_wsk_cli
+    set_wskcluster
     helm install $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml
     # helm upgrade $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk -f mycluster.yaml 
     # helm uninstall $owdev --namespace $openwhisk
