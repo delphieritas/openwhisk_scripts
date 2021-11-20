@@ -227,6 +227,8 @@ create_k8scluster(){
 	kubectl get nodes
 	kubectl get services -n kube-system
 	kubectl describe nodes
+	
+	docker ps
 	# kubectl logs owdev-init-couchdb-rcqp2 -n $openwhisk
 	# kubectl describe pod owdev-init-couchdb-2zhwh --namespace=$openwhisk
 
