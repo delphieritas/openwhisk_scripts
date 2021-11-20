@@ -145,8 +145,6 @@ config_wsk_cli(){
     # External to the Kubernetes cluster, using wsk cli
     set_wsk_cli
 
-    apiHostName=localhost
-    apiHostPort=31001 ???
     WHISK_SERVER=$apiHostName:$apiHostPort
     WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
     # To configure your wsk cli to connect to it, set the apihost property
@@ -258,8 +256,12 @@ set_openwhisk(){
     set_kind
     set_k8s
     
+
+    apiHostName=localhost
+    apiHostPort=31001 ???
+    
     # set_kind_config
-    create_k8scluster # ???
+    create_k8scluster
     
     
 (deploy_k8s) # ???
