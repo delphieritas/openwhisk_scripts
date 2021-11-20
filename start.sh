@@ -42,27 +42,36 @@ fi
 }
 
 set_kind_config(){
-    https://raw.githubusercontent.com/kubernetes-sigs/kind/main/site/content/docs/user/kind-example-config.yaml
-    https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy/kind/kind-cluster.yaml
     # for multi-node cluster
-    echo '# three node (two workers) cluster config
-kind: Cluster
+    # https://raw.githubusercontent.com/kubernetes-sigs/kind/main/site/content/docs/user/kind-example-config.yaml
+    # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy/kind/kind-cluster.yaml
+    echo "kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
-  extraPortMappings:
-  - containerPort: 80
-    hostPort: 80
-    # listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
-    # protocol: udp # Optional, defaults to tcp
 - role: worker
   extraPortMappings:
-    - hostPort: 31001
+    - hostPort: $apiHostPort
       containerPort: 31001
-## add one more control-plane node & worker
+- role: worker" > kind-example-config.yaml
+#     echo '# three node (two workers) cluster config
+# kind: Cluster
+# apiVersion: kind.x-k8s.io/v1alpha4
+# nodes:
 # - role: control-plane
+#   extraPortMappings:
+#   - containerPort: 80
+#     hostPort: 80
+#     # listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
+#     # protocol: udp # Optional, defaults to tcp
 # - role: worker
-' > kind-example-config.yaml
+#   extraPortMappings:
+#     - hostPort: 31001
+#       containerPort: 31001
+# ## add one more control-plane node & worker
+# # - role: control-plane
+# # - role: worker
+# ' > kind-example-config.yaml
 }
 
 set_kind(){
@@ -85,36 +94,38 @@ set_kind(){
 # ???
 set_wskcluster(){
 # create a default mycluster.yaml for a single worker node
-# https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy
+# If your cluster has a single worker node, then you should configure OpenWhisk without node affinity. This is done by adding the following lines to your mycluster.yaml
 # https://github.com/apache/openwhisk-deploy-kube/issues/226
 # https://github.com/apache/openwhisk-deploy-kube/issues/311
-echo 'affinity:
-  enabled: false
-toleration:
-  enabled: false
-invoker:
-  options: "-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false"
-' > mycluster.yaml
-# -------- or ----------
-# echo "whisk:
-#   ingress:
-#     type: NodePort
-#     apiHostName: $apiHostName
-#     apiHostPort: $apiHostPort
-#     useInternally: false
-# nginx:
-#   httpsNodePort: $apiHostPort
-# # disable affinity
-# affinity:
+# echo 'affinity:
 #   enabled: false
 # toleration:
 #   enabled: false
 # invoker:
-#   options: \"-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false\"
-#   # must use KCF as kind uses containerd as its container runtime
-#   containerFactory:
-#     impl: \"kubernetes\"
-# " > mycluster.yaml
+#   options: "-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false"
+# ' > mycluster.yaml
+# -------- or ----------
+# https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-kind.md # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy
+# https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy/kind/mycluster.yaml # https://github.com/apache/openwhisk-deploy-kube/tree/master/deploy
+echo "whisk:
+  ingress:
+    type: NodePort
+    apiHostName: $apiHostName
+    apiHostPort: $apiHostPort
+    useInternally: false
+nginx:
+  httpsNodePort: $apiHostPort
+# disable affinity
+affinity:
+  enabled: false
+toleration:
+  enabled: false
+invoker:
+  options: \"-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false\"
+  # must use KCF as kind uses containerd as its container runtime
+  containerFactory:
+    impl: \"kubernetes\"
+" > mycluster.yaml
 }
 
 set_wsk_cli(){
@@ -183,6 +194,11 @@ deploy_k8s(){
 	cidr=10.244.0.0/16
 	kubeadm init --pod-network-cidr=$cidr
 	# kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
+	
+	# tech requirements:
+	# https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-technical-requirements.md
+	# Unless you disable persistence (see configurationChoices.md), either your cluster must be configured to support Dynamic Volume Provision and you must have a DefaultStorageClass admission controller enabled or you must manually create any necessary PersistentVolumes when deploying the Helm chart.
+	# Endpoints of Kubernetes services must be able to loopback to themselves (the kubelet's hairpin-mode must not be none).
 }
 
 redeploy(){
@@ -202,21 +218,24 @@ kind load docker-image whisk/controller # using kind
 create_k8scluster(){
 	# ensure that Kubernetes is cloned in $(env PATH)/src/k8s.io/kubernetes
 	if [ ! -n "$cluster_name" ]; then read -p "Your K8s Cluster Name? cluster names must match `^[a-z0-9.-]+\$`:" cluster_name; fi
-	# (set_kind_config)
-	kind create cluster --name $cluster_name #(--config kind-example-config.yaml) # --image=... --wait 30s 
+	set_kind_config
+	kind create cluster --name $cluster_name --config kind-example-config.yaml # --image=... --wait 30s --wait 10m 
 	kind get clusters
 	# kind delete clusters $cluster_name
 	kubectl cluster-info --context kind-$cluster_name
 	kubectl get po -A  # kubectl get pods -n $openwhisk --watch
 	kubectl get nodes
 	kubectl get services -n kube-system
+	kubectl describe nodes
 	# kubectl logs owdev-init-couchdb-rcqp2 -n $openwhisk
 	# kubectl describe pod owdev-init-couchdb-2zhwh --namespace=$openwhisk
 
-	if [ ! -n "$docker_image_name_1" ]; then read -p "Your docker_image Name? :" docker_image_name_1; fi
-	kind load docker-image $docker_image_name_1 --name $cluster_name
-	# kind load docker-image $docker_image_name_1 $docker_image_name_2 --name $cluster_name
-	set_stanza
+
+			# ???
+			if [ ! -n "$docker_image_name_1" ]; then read -p "Your docker_image Name? :" docker_image_name_1; fi
+			kind load docker-image $docker_image_name_1 --name $cluster_name
+			# kind load docker-image $docker_image_name_1 $docker_image_name_2 --name $cluster_name
+			set_stanza
 
 	# kubectl apply -f $my-manifest-using-my-image:$image_version
 	kind export logs $PWD --name $cluster_name
@@ -229,23 +248,31 @@ set_openwhisk(){
     set_helm3
     # Deploy OpenWhisk with Helm
     # add a chart repository
-    helm repo add openwhisk https://openwhisk.apache.org/charts
+    helm repo add openwhisk https://openwhisk.apache.org/charts # helm repo add stable https://charts.helm.sh/stable
     helm repo update
 
     
     set_kind
     set_k8s
-    # (set_kind_config)
-    create_k8scluster
+    
+    # set_kind_config
+    create_k8scluster # ???
     
     
-(deploy_k8s)
+(deploy_k8s) # ???
 
     owdev=??  #deployment name # Your named release
     openwhisk=??  #namespace
     # set $OPENWHISK_HOME to its top-level directory
     export OPENWHISK_HOME=$PWD/openwhisk-deploy-kube
-    
+
+	# https://github.com/apache/incubator-openwhisk-deploy-kube/tree/master/docker/couchdb
+	git config --global --unset http.proxy
+	git config --global --unset https.proxy
+	# blog.csdn.net/weixin_42018581/article/details/103079725
+	# https://blog.csdn.net/qq_38415505/article/details/83687207
+	# blog.csdn.net/Dashi_Lu/article/details/89641778
+
     config_wsk_cli
     set_wskcluster
     helm install $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml
