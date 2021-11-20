@@ -150,8 +150,9 @@ config_wsk_cli(){
     WHISK_SERVER=$apiHostName:$apiHostPort
     WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
     # To configure your wsk cli to connect to it, set the apihost property
-    wsk property set --apihost $WHISK_SERVER --auth $WHISK_AUTH # --namespace guest
+    wsk property set --apihost $WHISK_SERVER   # --auth $WHISK_AUTH
     wsk list -v
+    wsk property -i get
 }
 
 set_k8s(){
