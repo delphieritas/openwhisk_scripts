@@ -41,9 +41,8 @@ if ( ! helm version ); then
 fi
 }
 
-set_kind_config(){
+set_k8s_yaml(){
     # for multi-node cluster
-    # https://raw.githubusercontent.com/kubernetes-sigs/kind/main/site/content/docs/user/kind-example-config.yaml
     # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy/kind/kind-cluster.yaml
     echo "kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -53,25 +52,7 @@ nodes:
   extraPortMappings:
     - hostPort: $apiHostPort
       containerPort: 31001
-- role: worker" > kind-example-config.yaml
-#     echo '# three node (two workers) cluster config
-# kind: Cluster
-# apiVersion: kind.x-k8s.io/v1alpha4
-# nodes:
-# - role: control-plane
-#   extraPortMappings:
-#   - containerPort: 80
-#     hostPort: 80
-#     # listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
-#     # protocol: udp # Optional, defaults to tcp
-# - role: worker
-#   extraPortMappings:
-#     - hostPort: 31001
-#       containerPort: 31001
-# ## add one more control-plane node & worker
-# # - role: control-plane
-# # - role: worker
-# ' > kind-example-config.yaml
+- role: worker" > k8s.yaml # https://github.com/apache/openwhisk-deploy-kube/issues/311 https://github.com/apache/openwhisk-deploy-kube/issues/303
 }
 
 set_kind(){
@@ -92,9 +73,10 @@ set_kind(){
 }
 
 # ???
-set_wskcluster(){
+set_wsk_yaml(){
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-kind.md # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-diy.md
+# https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/docs/k8s-kind.md#configuring-openwhisk https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/docs/configurationChoices.md
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy/kind/mycluster.yaml # https://github.com/apache/openwhisk-deploy-kube/tree/master/deploy
 # mac https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy/docker-macOS/mycluster.yaml
 echo "whisk:
@@ -104,24 +86,34 @@ echo "whisk:
     apiHostPort: $apiHostPort
 #    useInternally: false
 nginx:
-  httpsNodePort: $apiHostPort
-" > mycluster.yaml
-# -------- or ----------
+  httpsNodePort: $apiHostPort" > mycluster.yaml 
+
 # create a default mycluster.yaml for a single worker node
-# If your cluster has a single worker node, then you should configure OpenWhisk without node affinity. This is done by adding the following lines to your mycluster.yaml
-# https://github.com/apache/openwhisk-deploy-kube/issues/226
-# https://github.com/apache/openwhisk-deploy-kube/issues/311
-# echo '# disable affinity
-#affinity:
-#  enabled: false
-#toleration:
-#  enabled: false
-#invoker:
-#  options: \"-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false\"
+# If your cluster has a single worker node, then you should configure OpenWhisk without node affinity. This is done by adding the following lines to your mycluster.yaml https://github.com/apache/openwhisk-deploy-kube/blob/master/README.md#initial-setup https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/README.md
+echo '# disable affinity
+affinity:
+ enabled: false
+toleration:
+ enabled: false
+invoker:
+ options: \"-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false\"
+ # must use KCF as kind uses containerd as its container runtime
+ containerFactory:
+   impl: \"kubernetes\" ' >> mycluster.yaml
+# -------- or ---------
+# echo '
+# invoker:
 #  # must use KCF as kind uses containerd as its container runtime
 #  containerFactory:
-#    impl: \"kubernetes\"
+#    impl: \"kubernetes\" 
 # ' >> mycluster.yaml
+# https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/docs/k8s-kind.md#configuring-openwhisk https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/docs/configurationChoices.md
+# https://github.com/apache/openwhisk-deploy-kube/issues/311 https://github.com/apache/openwhisk-deploy-kube/issues/226
+# --------------------
+# Decoupling the database
+# https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/docs/configurationChoices.md
+# echo 'db:
+#   wipeAndInit: false' >> mycluster.yaml
 }
 
 set_wsk_cli(){
@@ -141,6 +133,7 @@ config_wsk_cli(){
     # External to the Kubernetes cluster, using wsk cli
     set_wsk_cli
 
+# 	https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/README.md
     WHISK_SERVER=$apiHostName:$apiHostPort
     WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
     # To configure your wsk cli to connect to it, set the apihost property
@@ -149,7 +142,7 @@ config_wsk_cli(){
     wsk property -i get
 }
 
-set_k8s(){
+set_k8s_cli(){
 # install k8s Kubernetes version 1.19+, kubelet's hairpin-mode must not be none: Endpoints of Kubernetes services must be able to loopback to themselves
 # https://www.howtoforge.com/tutorial/how-to-install-kubernetes-on-ubuntu/
 # add a signing key in you on Ubuntu, adding a subscription key
@@ -164,7 +157,7 @@ if ( ! kubectl version --client ); then
 	curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${RELEASE}/bin/linux/${ARCH}/{kubeadm,kubelet,kubectl}
 	chmod +x {kubeadm,kubelet,kubectl}
 	export PATH=$PATH:$PWD
-        chown $(id -u):$(id -g) /etc/kubernetes/admin.conf
+        chown $(id -u):$(id -g) /etc/kubernetes/ #admin.conf
         export KUBECONFIG=/etc/kubernetes/admin.conf  # https://k21academy.com/docker-kubernetes/the-connection-to-the-server-localhost8080-was-refused/
         # export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
         # echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> $HOME/.bashrc
@@ -188,7 +181,7 @@ deploy_k8s(){
 
 	# init k8s cluster
 	cidr=10.244.0.0/16
-	kubeadm init --pod-network-cidr=$cidr
+	sudo kubeadm init --pod-network-cidr=$cidr
 	# kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
 	
 	# tech requirements:
@@ -210,22 +203,21 @@ helm upgrade $owdev ./helm/openwhisk -n $openwhisk -f mycluster.yaml # using hel
 kind load docker-image whisk/controller # using kind
 }
 
-# (set_kind_config)
+# (set_k8s_yaml)
 create_k8scluster(){
 	# ensure that Kubernetes is cloned in $(env PATH)/src/k8s.io/kubernetes
 	if [ ! -n "$cluster_name" ]; then read -p "Your K8s Cluster Name? cluster names must match `^[a-z0-9.-]+\$`:" cluster_name; fi
-	set_kind_config
-	kind create cluster --name $cluster_name --config kind-example-config.yaml # --image=... --wait 30s --wait 10m 
-	kind get clusters
+	set_k8s_yaml
+	kind create cluster --name $cluster_name --config $PWD/k8s.yaml # --image=... --wait 30s --wait 10m 
+	
 	# kind delete clusters $cluster_name
 	kubectl cluster-info --context kind-$cluster_name
-
-	kubectl get pods -o wide -A # kubectl get po -A  # kubectl get pods -n $openwhisk --watch
-	kubectl get nodes
+	kubectl get nodes # kind get clusters
 	kubectl get services #-n kube-system
-	kubectl describe nodes
 	
-	docker ps
+	docker ps -a
+	# docker logs -f <container_id>
+	kubectl describe node  | grep InternalIP: | awk '{print $2}' # https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/docs/k8s-kind.md
 	# kubectl logs owdev-init-couchdb-rcqp2 -n $openwhisk
 	# kubectl describe pod owdev-init-couchdb-2zhwh --namespace=$openwhisk
 
@@ -237,7 +229,7 @@ create_k8scluster(){
 			set_stanza
 
 	# kubectl apply -f $my-manifest-using-my-image:$image_version
-	kind export logs $PWD --name $cluster_name
+	# kind export logs $PWD/k8s_logs --name $cluster_name
 
 	# must use the KubernetesContainerFactory when running OpenWhisk on kind
 }
@@ -252,50 +244,61 @@ set_openwhisk(){
 
     
     set_kind
-    set_k8s
+    set_k8s_cli
     
 
     apiHostName=localhost
     apiHostPort=31001 ???
     
-    # set_kind_config
+    # set_k8s_yaml
     create_k8scluster
-    
-    
-(deploy_k8s) # ???
 
-    owdev=??  #deployment name # Your named release
-    openwhisk=??  #namespace
+	# (deploy_k8s) # ???
+
+    owdev=owdev ???  #deployment name # Your named release
+    openwhisk=openwhisk ???  #namespace
     # set $OPENWHISK_HOME to its top-level directory
     export OPENWHISK_HOME=$PWD/openwhisk-deploy-kube
 
-	# https://github.com/apache/incubator-openwhisk-deploy-kube/tree/master/docker/couchdb
-	git config --global --unset http.proxy
-	git config --global --unset https.proxy
-	# blog.csdn.net/weixin_42018581/article/details/103079725
-	# https://blog.csdn.net/qq_38415505/article/details/83687207
-	# blog.csdn.net/Dashi_Lu/article/details/89641778
-
-    config_wsk_cli
-    set_wskcluster
-    helm install $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml
+    set_wsk_yaml
+    helm install $owdev $OPENWHISK_HOME/helm_repo/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml # helm ls # helm status $owdev -n $openwhisk
     # helm upgrade $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk -f mycluster.yaml 
     # helm uninstall $owdev --namespace $openwhisk
 
     # Once the 'owdev-install-packages' Pod is in the `Completed` state, your OpenWhisk deployment is ready to be used.
-    helm status $owdev -n $openwhisk
-    
+    kubectl get pods -o wide -A # kubectl get po -A  # kubectl get pods -n $openwhisk --watch    
 
-    # Once the deployment is ready, you can test it with 
+    # kubectl logs <$pod_name> -n $openwhisk
+    # kubectl describe pod <$pod_name>  --namespace=$openwhisk
+    	## https://github.com/apache/incubator-openwhisk-deploy-kube/tree/master/docker/couchdb
+	#git config --global --unset http.proxy
+	#git config --global --unset https.proxy
+	## blog.csdn.net/weixin_42018581/article/details/103079725
+	## https://blog.csdn.net/qq_38415505/article/details/83687207
+	## blog.csdn.net/Dashi_Lu/article/details/89641778
+    
+    # docker ps
+    kubectl describe node $cluster_name-worker  | grep InternalIP: | awk '{print $2}'
+    config_wsk_cli
+
+    # kubectl label nodes --all openwhisk-role=invoker # for single node in the cluster https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/README.md#initial-setup https://github.com/apache/openwhisk-deploy-kube/blob/master/README.md#initial-setup
+
+    ## Once the deployment is ready, you can test it with 
     # helm test $owdev -n $openwhisk --cleanup
     cd ..
 }
 
 set_pyfile(){
 echo '
-def main(dict):
-    return {"greeting": "greeting"}
-' > hello.py
+def main(args):
+    name = args.get("name", "stranger")
+    greeting = "Hello " + name + "!"
+    print({"greeting": greeting})
+    return {"greeting": greeting}
+if __name__ == "__main__":
+	main({ 
+    	"name": "alex"})
+	print(main)' > hello.py
 }
 
 # ???
@@ -308,13 +311,31 @@ echo '		packages:
                 		runtime: python:3' > manifest.yaml
 }
 
-invoke_wsk_cli(){
-# 	set_pyfile
+#(set_pyfile)
+wsk_cli_create_invoke(){
+	#(set_pyfile)
+	pythonfile=hello.py ???
+	docker_user= ???
+	docker_image= ???
+	function_name= ???
 
-# 	https://github.com/apache/openwhisk/blob/master/docs/actions.md
+	wsk -i action create $function_name --docker $docker_user/$docker_image:latest $pythonfile -d --web true --timeout 80000
+	# wsk action update smart_body_crop action.zip --main action_handler  \
+	#     --param model_url "$1" \
+	#     --param from_upper Eyes \
+	#     --param to_lower Hips \
+	#     --memory 3891 \
+	#     --docker adobeapiplatform/openwhisk-python3aiaction:0.11.0
 
-# 	wsk action create helloPy hello.py
-# 	wsk action invoke helloPy --result --param name World
+	wsk -i action invoke $function_name -b --param name "alex" --debug \
+	--result
+	# !wsk action invoke smart_body_crop --param image "https://i.pinimg.com/236x/17/1c/a6/171ca6b06111529aa6f10b1f4e418339--style-men-my-style.jpg" \
+	#   --param from_upper Eyes --param to_lower Elbows
+
+	# https://github.com/apache/openwhisk/blob/master/docs/actions.md
+
+	# wsk action create helloPy hello.py
+	# wsk action invoke helloPy --result --param name World
 }
 
 # ???
