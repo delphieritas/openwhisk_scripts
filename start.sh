@@ -93,39 +93,35 @@ set_kind(){
 
 # ???
 set_wskcluster(){
-# create a default mycluster.yaml for a single worker node
-# If your cluster has a single worker node, then you should configure OpenWhisk without node affinity. This is done by adding the following lines to your mycluster.yaml
-# https://github.com/apache/openwhisk-deploy-kube/issues/226
-# https://github.com/apache/openwhisk-deploy-kube/issues/311
-# echo 'affinity:
-#   enabled: false
-# toleration:
-#   enabled: false
-# invoker:
-#   options: "-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false"
-# ' > mycluster.yaml
-# -------- or ----------
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-kind.md # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy
+# https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-diy.md
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy/kind/mycluster.yaml # https://github.com/apache/openwhisk-deploy-kube/tree/master/deploy
+# mac https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy/docker-macOS/mycluster.yaml
 echo "whisk:
   ingress:
     type: NodePort
     apiHostName: $apiHostName
     apiHostPort: $apiHostPort
-    useInternally: false
+#    useInternally: false
 nginx:
   httpsNodePort: $apiHostPort
-# disable affinity
-affinity:
-  enabled: false
-toleration:
-  enabled: false
-invoker:
-  options: \"-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false\"
-  # must use KCF as kind uses containerd as its container runtime
-  containerFactory:
-    impl: \"kubernetes\"
 " > mycluster.yaml
+# -------- or ----------
+# create a default mycluster.yaml for a single worker node
+# If your cluster has a single worker node, then you should configure OpenWhisk without node affinity. This is done by adding the following lines to your mycluster.yaml
+# https://github.com/apache/openwhisk-deploy-kube/issues/226
+# https://github.com/apache/openwhisk-deploy-kube/issues/311
+# echo '# disable affinity
+#affinity:
+#  enabled: false
+#toleration:
+#  enabled: false
+#invoker:
+#  options: \"-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false\"
+#  # must use KCF as kind uses containerd as its container runtime
+#  containerFactory:
+#    impl: \"kubernetes\"
+# ' >> mycluster.yaml
 }
 
 set_wsk_cli(){
@@ -180,6 +176,7 @@ if ( ! kubectl version --client ); then
 fi
 }
 
+# ???
 deploy_k8s(){
 	# In order to set up the Kubernetes Linux servers, disabling the swap memory on each server
 	swapon -s
@@ -222,9 +219,10 @@ create_k8scluster(){
 	kind get clusters
 	# kind delete clusters $cluster_name
 	kubectl cluster-info --context kind-$cluster_name
-	kubectl get po -A  # kubectl get pods -n $openwhisk --watch
+
+	kubectl get pods -o wide -A # kubectl get po -A  # kubectl get pods -n $openwhisk --watch
 	kubectl get nodes
-	kubectl get services -n kube-system
+	kubectl get services #-n kube-system
 	kubectl describe nodes
 	
 	docker ps
