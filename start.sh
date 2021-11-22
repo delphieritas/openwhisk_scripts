@@ -312,27 +312,54 @@ echo '		packages:
 }
 
 set_dockerfile(){
-echo"FROM openwhisk/python3aiaction:latest
+echo "FROM openwhisk/python3aiaction:latest
 
 RUN pip freeze | grep tensor| xargs pip uninstall -y
-# RUN pip freeze | grep torch| xargs pip uninstall -y
+RUN pip freeze | grep torch| xargs pip uninstall -y
 RUN pip freeze | grep sci| xargs pip uninstall -y
 RUN pip freeze | grep jupyter| xargs pip uninstall -y
 RUN pip freeze | grep notebook| xargs pip uninstall -y
 RUN pip freeze | grep matplotlib | xargs pip uninstall -y
 RUN pip freeze | grep Keras | xargs pip uninstall -y
 
-RUN apt update && apt install -y \
-wget && wget https://www.python.org/ftp/python/3.9.7/Python-3.9.7.tgz && tar xzf Python-3.9.7.tgz  && cd Python-3.9.7  && ./configure --enable-optimizations  && make altinstall 
+RUN rm -rf /usr/local/bin/pip3 /usr/local/bin/pip /usr/local/bin/pip3.5 /usr/local/bin/ipython3 /usr/local/bin/ipython /usr/local/bin/jupyter /usr/local/bin/jupyter-bundlerextension /usr/local/bin/jupyter-console /usr/local/bin/jupyter-kernel /usr/local/bin/jupyter-kernelspec /usr/local/bin/jupyter-migrate /usr/local/bin/jupyter-nbconvert /usr/local/bin/jupyter-nbextension /usr/local/bin/jupyter-notebook /usr/local/bin/jupyter-qtconsole /usr/local/bin/jupyter-run /usr/local/bin/jupyter-serverextension /usr/local/bin/jupyter-troubleshoot /usr/local/bin/jupyter-trust
 
-COPY $pythonfile.py .
-RUN chmod +x *
+RUN apt-get update && apt-get install -y liblzma-dev libbz2-dev wget \
+# && apt install  \ #  bzip2* lzma \ # && apt  apt install -y wget \
+&& wget https://www.python.org/ftp/python/3.9.7/Python-3.9.7.tgz \
+&& tar xzf Python-3.9.7.tgz \ 
+&& cd Python-3.9.7 \ 
+&& ./configure --enable-optimizations \ 
+&& make altinstall 
 
-# RUN pip3.9 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
-# RUN rm -rf /usr/local/bin/pip3 /usr/local/bin/pip /usr/local/bin/pip3.5 /usr/local/bin/ipython3 /usr/local/bin/ipython /usr/local/bin/jupyter /usr/local/bin/jupyter-bundlerextension /usr/local/bin/jupyter-console /usr/local/bin/jupyter-kernel /usr/local/bin/jupyter-kernelspec /usr/local/bin/jupyter-migrate /usr/local/bin/jupyter-nbconvert /usr/local/bin/jupyter-nbextension /usr/local/bin/jupyter-notebook /usr/local/bin/jupyter-qtconsole /usr/local/bin/jupyter-run /usr/local/bin/jupyter-serverextension /usr/local/bin/jupyter-troubleshoot /usr/local/bin/jupyter-trust
-# RUN echo 'alias python=python3.9' >> ~/.bashrc && echo 'alias pip=pip3.9' >> ~/.bashrc && alias python=python3.9 && alias pip=pip3.9
+RUN echo 'alias python=python3.9' >> ~/.bashrc && echo 'alias pip=pip3.9' >> ~/.bashrc && alias python=python3.9 && alias pip=pip3.9
 
-EXPOSE 31000" > $dockerfile.Dockerfile
+RUN pip3.9 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+
+COPY hello.py .
+RUN chmod +x *" > $dockerfile.Dockerfile
+#----------------
+# echo"FROM openwhisk/python3aiaction:latest
+
+# RUN pip freeze | grep tensor| xargs pip uninstall -y
+# # RUN pip freeze | grep torch| xargs pip uninstall -y
+# RUN pip freeze | grep sci| xargs pip uninstall -y
+# RUN pip freeze | grep jupyter| xargs pip uninstall -y
+# RUN pip freeze | grep notebook| xargs pip uninstall -y
+# RUN pip freeze | grep matplotlib | xargs pip uninstall -y
+# RUN pip freeze | grep Keras | xargs pip uninstall -y
+
+# RUN apt update && apt install -y \
+# wget && wget https://www.python.org/ftp/python/3.9.7/Python-3.9.7.tgz && tar xzf Python-3.9.7.tgz  && cd Python-3.9.7  && ./configure --enable-optimizations  && make altinstall 
+
+# COPY $pythonfile.py .
+# RUN chmod +x *
+
+# # RUN pip3.9 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+# # RUN rm -rf /usr/local/bin/pip3 /usr/local/bin/pip /usr/local/bin/pip3.5 /usr/local/bin/ipython3 /usr/local/bin/ipython /usr/local/bin/jupyter /usr/local/bin/jupyter-bundlerextension /usr/local/bin/jupyter-console /usr/local/bin/jupyter-kernel /usr/local/bin/jupyter-kernelspec /usr/local/bin/jupyter-migrate /usr/local/bin/jupyter-nbconvert /usr/local/bin/jupyter-nbextension /usr/local/bin/jupyter-notebook /usr/local/bin/jupyter-qtconsole /usr/local/bin/jupyter-run /usr/local/bin/jupyter-serverextension /usr/local/bin/jupyter-troubleshoot /usr/local/bin/jupyter-trust
+# # RUN echo 'alias python=python3.9' >> ~/.bashrc && echo 'alias pip=pip3.9' >> ~/.bashrc && alias python=python3.9 && alias pip=pip3.9
+
+# EXPOSE 31000" > $dockerfile.Dockerfile
 }
 
 create_docker_image(){
