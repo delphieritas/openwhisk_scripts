@@ -26,6 +26,31 @@ if (! wget --version ); then
 fi
 }
 
+set_docker(){
+# Check your Docker version
+if (! docker --version ); then echo "
+Be aware that you cannot install/start Docker inside a Docker container:
+https://stackoverflow.com/questions/51857634/cannot-connect-to-the-docker-daemon-at-unix-var-run-docker-sock-is-the-docke
+https://jpetazzo.github.io/2015/09/03/do-not-use-docker-in-docker-for-ci/
+\
+You do not have Docker installed, please follow this website to install it first:
+https://docs.docker.com/engine/installation/#installation"
+set_cert
+set_curl
+
+# curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh;
+apt-get install -y -qq apt-transport-https gnupg
+curl -fsSL "https://download.docker.com/linux/ubuntu/gpg" | gpg --dearmor --yes -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu focal stable" > /etc/apt/sources.list.d/docker.list
+apt-get update && apt-get -y upgrade && apt-get install -y -qq --no-install-recommends docker-ce-cli docker-scan-plugin docker-ce docker-ce-rootless-extras;
+fi
+
+# start docker
+if (! systemctl --version ); then 
+    apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends --no-install-suggests systemctl && systemctl start docker;
+fi
+}
+
 set_helm3(){
 # v3.2.0++
 if ( ! helm version ); then 
@@ -321,6 +346,7 @@ RUN chmod +x *" > $dockerfile.Dockerfile
 }
 
 create_docker_image(){
+        set_docker
 	set_dockerfile
 
 	docker build -t $docker_image -f $dockerfile.Dockerfile $PWD
@@ -356,11 +382,11 @@ create_invoke_wsk_action(){
 wsk_cli_create_invoke(){
 	set_pyfile
 	
-	read -p "Your python file name? e.g. hello.py:" pythonfile; fi
-	read -p "Your Docker user name? :" docker_user; fi
-	read -p "Your Docker Image name? :" docker_image; fi
-	read -p "Your Openwhisk Function name? e.g. func_1:" function_name; fi
-	read -p "Your Dockerfile name? e.g. vgg.Dockerfile:" dockerfile; fi
+	if [ ! -n "$pythonfile" ]; then read -p "Your python file name? e.g. hello.py:" pythonfile; fi
+	if [ ! -n "$docker_user" ]; then read -p "Your Docker user name? :" docker_user; fi
+	if [ ! -n "$docker_image" ]; then read -p "Your Docker Image name? :" docker_image; fi
+	if [ ! -n "$function_name" ]; then read -p "Your Openwhisk Function name? e.g. func_1:" function_name; fi
+	if [ ! -n "$dockerfile" ]; then read -p "Your Dockerfile name? e.g. vgg.Dockerfile:" dockerfile; fi
 
         create_docker_image
 	
