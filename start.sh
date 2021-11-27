@@ -32,13 +32,14 @@ if ( ! helm version ); then
     set_cert
     set_curl 
 
-    mkdir helm3
-    cd helm3
+    # mkdir helm3
+    # cd helm3
     curl -LO https://get.helm.sh/helm-v3.7.0-linux-amd64.tar.gz
     tar -zxvf helm-v3.7.0-linux-amd64.tar.gz
     chmod +x ./helm
     export PATH=$PATH:$PWD
-    cd ..
+    rm helm-v3.7.0-linux-amd64.tar.gz
+    # cd ..
 fi
 }
 
@@ -120,13 +121,13 @@ invoker:
 set_wsk_cli(){
     if ( ! wsk -i );then 
     # https://openwhisk.ng.bluemix.net/cli/go/download/
-    mkdir wsk
-    cd wsk
+    # mkdir wsk
+    # cd wsk
     # wget https://openwhisk.ng.bluemix.net/cli/go/download/linux/amd64/OpenWhisk_CLI-linux.tgz 
     wget https://openwhisk.ng.bluemix.net/cli/go/download/linux/amd64/wsk
     chmod +x ./wsk
     export PATH=$PATH:$PWD
-    cd ..;
+    # cd ..;
     fi
 }
 
