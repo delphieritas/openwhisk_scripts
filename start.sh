@@ -384,7 +384,7 @@ wsk_cli_create_invoke(){
 
         create_docker_image
 	
-	wsk -i action create $function_name --docker $docker_user/$docker_image:latest $pythonfile -d --web true --timeout 80000
+	wsk -i action create $function_name --docker $docker_user/$docker_image:latest $pythonfile -d --web true --timeout 80000 # wsk action create $function_name $pythonfile
 	# wsk action update smart_body_crop action.zip --main action_handler  \
 	#     --param model_url "$1" \
 	#     --param from_upper Eyes \
@@ -399,8 +399,9 @@ wsk_cli_create_invoke(){
 
 	# https://github.com/apache/openwhisk/blob/master/docs/actions.md
 
-	# wsk action create helloPy hello.py
-	# wsk action invoke helloPy --result --param name World
+	action_id=`wsk activation list -i |grep $function_name | awk '{print $3}'`
+	wsk activation get -i $action_id # wsk activation result -i <ID> # wsk activation logs -i <ID> # wsk activation get -i --last
+	# wsk -i action delete $function_name
 }
 
 # ???
