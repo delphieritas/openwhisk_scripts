@@ -51,6 +51,37 @@ if (! systemctl --version ); then
 fi
 }
 
+set_k8s(){
+# https://microk8s.io
+# https://techexpert.tips/kubernetes/kubernetes-installation-ubuntu-linux/
+if (! kubectl version | grep 'Server Version: ' ); then 
+kubeadm config images pull
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+# init k8s cluster
+cidr=10.244.0.0/16
+kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
+
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config # chown 1033:2000 /dir
+chmod 644 /etc/kubernetes/admin.conf
+# In order to set up the Kubernetes Linux servers, disabling the swap memory on each server
+swapon -s
+swapoff –a
+hostnamectl set-hostname kubernetes-01.local
+; fi
+
+# join any number of worker nodes by running the following on each as root:
+# kubeadm join 192.168.100.9:6443 --token l7fezg.2nm80pvehn2f2bbz \
+#     --discovery-token-ca-cert-hash sha256:6dfc8c80e8e125c6d4d79ec82ea64deb0dcfa0a4bda33e16a8a9fa93794e3aae
+
+# tech requirements:
+# https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-technical-requirements.md
+# Unless you disable persistence (see configurationChoices.md), either your cluster must be configured to support Dynamic Volume Provision and you must have a DefaultStorageClass admission controller enabled or you must manually create any necessary PersistentVolumes when deploying the Helm chart.
+# Endpoints of Kubernetes services must be able to loopback to themselves (the kubelet's hairpin-mode must not be none).
+}
+
 set_helm3(){
 # v3.2.0++
 if ( ! helm version ); then 
@@ -65,7 +96,7 @@ if ( ! helm version ); then
     export PATH=$PATH:$PWD
     rm helm-v3.7.0-linux-amd64.tar.gz
     # cd ..
-fi
+; fi
 }
 
 set_k8s_yaml(){
@@ -100,6 +131,7 @@ if ( ! kind version ); then
     # mv ./kind /usr/local/bin/kind
     export PATH=$PATH:$PWD
     #cd ..
+; fi
 }
 
 set_wsk_yaml(){
@@ -146,7 +178,7 @@ invoker:
 }
 
 set_wsk_cli(){
-    if ( ! wsk -i );then 
+    if ( ! wsk -i ); then 
     set_wget
     # https://openwhisk.ng.bluemix.net/cli/go/download/
     # mkdir wsk
@@ -156,7 +188,7 @@ set_wsk_cli(){
     chmod +x ./wsk
     export PATH=$PATH:$PWD
     # cd ..;
-    fi
+; fi
 }
 
 config_wsk_cli(){
@@ -196,7 +228,7 @@ if ( ! kubectl version --client ); then
 	#apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main" # sed -i -e '50d' /etc/apt/sources.list # sed -i '50s/\(.*\)/#\1/' /etc/apt/sources.list
 	#apt-get update && apt-get -y upgrade && apt-get install kubeadm kubelet kubectl # apt update && apt install -y kubeadm kubelet kubectl
 	#apt-mark hold kubeadm kubelet kubectl;
-fi
+; fi
 }
 
 # (set_k8s_yaml)
@@ -245,6 +277,7 @@ set_openwhisk(){
 
     set_kind
     set_k8s_cli
+    set_k8s
     
     apiHostName=localhost
     apiHostPort=31001
