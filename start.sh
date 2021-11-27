@@ -68,6 +68,8 @@ set_kind(){
 if ( ! kind version ); then 
     #mkdir KIND
     #cd KIND
+    set_cert
+    set_curl 
     curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.11.1/kind-linux-amd64
     chmod +x ./kind
     # mv ./kind /usr/local/bin/kind
@@ -120,6 +122,7 @@ invoker:
 
 set_wsk_cli(){
     if ( ! wsk -i );then 
+    set_wget
     # https://openwhisk.ng.bluemix.net/cli/go/download/
     # mkdir wsk
     # cd wsk
@@ -195,13 +198,25 @@ create_k8scluster(){
 	# must use the KubernetesContainerFactory when running OpenWhisk on kind
 }
 
-set_openwhisk(){
-    
-    set_helm3
-    # Deploy OpenWhisk with Helm
+deploy_wsk_cluster(){
     # add a chart repository
     helm repo add openwhisk https://openwhisk.apache.org/charts # helm repo add stable https://charts.helm.sh/stable
     helm repo update
+    set_wsk_yaml
+    helm install $owdev $openwhisk/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml # helm ls # helm status $owdev -n $openwhisk
+    #----------- or using git --------------
+    # set_git
+    # git clone https://github.com/apache/openwhisk-deploy-kube.git
+    ## set $OPENWHISK_HOME to its top-level directory
+    # export OPENWHISK_HOME=$PWD/openwhisk-deploy-kube
+    # helm install $owdev $OPENWHISK_HOME/helm_repo/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml 
+    # helm upgrade $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk -f mycluster.yaml 
+    # helm uninstall $owdev --namespace $openwhisk
+}
+
+set_openwhisk(){
+    
+    set_helm3
 
     set_kind
     set_k8s_cli
@@ -214,13 +229,9 @@ set_openwhisk(){
 
     owdev=owdev  #deployment name # Your named release
     openwhisk=openwhisk  #namespace
-    # set $OPENWHISK_HOME to its top-level directory
-    export OPENWHISK_HOME=$PWD/openwhisk-deploy-kube
 
-    set_wsk_yaml
-    helm install $owdev $OPENWHISK_HOME/helm_repo/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml # helm ls # helm status $owdev -n $openwhisk
-    # helm upgrade $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk -f mycluster.yaml 
-    # helm uninstall $owdev --namespace $openwhisk
+    # Deploy OpenWhisk with Helm
+    deploy_wsk_cluster
 
     # Once the 'owdev-install-packages' Pod is in the `Completed` state, your OpenWhisk deployment is ready to be used.
     kubectl get pods -o wide -A # kubectl get po -A  # kubectl get pods -n $openwhisk --watch    
@@ -242,7 +253,7 @@ set_openwhisk(){
 
     ## Once the deployment is ready, you can test it with 
     # helm test $owdev -n $openwhisk --cleanup
-    cd ..
+    # cd ..
 }
 
 set_pyfile(){
@@ -319,18 +330,7 @@ create_docker_image(){
 	# docker pull $docker_user/$docker_image:latest
 }
 
-#(set_pyfile)
-wsk_cli_create_invoke(){
-	set_pyfile
-	
-	read -p "Your python file name? e.g. hello.py:" pythonfile; fi
-	read -p "Your Docker user name? :" docker_user; fi
-	read -p "Your Docker Image name? :" docker_image; fi
-	read -p "Your Openwhisk Function name? e.g. func_1:" function_name; fi
-	read -p "Your Dockerfile name? e.g. vgg.Dockerfile:" dockerfile; fi
-
-        create_docker_image
-	
+create_invoke_wsk_action(){
 	wsk -i action create $function_name --docker $docker_user/$docker_image:latest $pythonfile -d --web true --timeout 80000 # wsk action create $function_name $pythonfile
 	# wsk -i action update $function_name $pythonfile --timeout 80000
 	# wsk -i action update $function_name action.zip --main action_handler  \
@@ -350,6 +350,21 @@ wsk_cli_create_invoke(){
 	action_id=`wsk activation list -i |grep $function_name | awk '{print $3}'`
 	wsk activation get -i $action_id # wsk activation result -i <ID> # wsk activation logs -i <ID> # wsk activation get -i --last
 	# wsk -i action delete $function_name
+}
+
+#(set_pyfile)
+wsk_cli_create_invoke(){
+	set_pyfile
+	
+	read -p "Your python file name? e.g. hello.py:" pythonfile; fi
+	read -p "Your Docker user name? :" docker_user; fi
+	read -p "Your Docker Image name? :" docker_image; fi
+	read -p "Your Openwhisk Function name? e.g. func_1:" function_name; fi
+	read -p "Your Dockerfile name? e.g. vgg.Dockerfile:" dockerfile; fi
+
+        create_docker_image
+	
+	create_invoke_wsk_action
 }
 
 clean_up(){
