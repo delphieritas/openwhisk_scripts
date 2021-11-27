@@ -25,6 +25,7 @@ if (! wget --version ); then
     apt-get update && apt-get -y upgrade && apt-get install -y -qq --no-install-recommends --no-install-suggests wget;
 fi
 }
+
 set_helm3(){
 # v3.2.0++
 if ( ! helm version ); then 
@@ -56,23 +57,23 @@ nodes:
 }
 
 set_kind(){
+    # kind v0.11.1 go1.16.4 linux/amd64
     # not recommended for production deployments of OpenWhisk
     # https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-kind.md
     # assumes that port 31001 #deploy/kind/kind-cluster.yaml
 
     # https://github.com/kubernetes-sigs/kind/releases
     # curl https://github.com/kubernetes-sigs/kind/releases/download/v0.11.1/kind-linux-amd64 -o KIND
-
-    mkdir KIND
-    cd KIND
+if ( ! kind version ); then 
+    #mkdir KIND
+    #cd KIND
     curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.11.1/kind-linux-amd64
     chmod +x ./kind
     # mv ./kind /usr/local/bin/kind
     export PATH=$PATH:$PWD
-    cd ..
+    #cd ..
 }
 
-# ???
 set_wsk_yaml(){
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-kind.md # https://github.com/apache/openwhisk-deploy-kube/blob/master/deploy
 # https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-diy.md
@@ -133,7 +134,7 @@ config_wsk_cli(){
     # External to the Kubernetes cluster, using wsk cli
     set_wsk_cli
 
-# 	https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/README.md
+    # https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/README.md
     WHISK_SERVER=$apiHostName:$apiHostPort
     WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
     # To configure your wsk cli to connect to it, set the apihost property
@@ -169,40 +170,6 @@ if ( ! kubectl version --client ); then
 fi
 }
 
-# ???
-deploy_k8s(){
-	# In order to set up the Kubernetes Linux servers, disabling the swap memory on each server
-	swapon -s
-	swapoff –a
-
-	# set as the master node
-	if [ ! -n "$master_node" ]; then read -p "Your master_node Name? :" master_node; fi
-	hostnamectl set-hostname $master_node
-
-	# init k8s cluster
-	cidr=10.244.0.0/16
-	sudo kubeadm init --pod-network-cidr=$cidr
-	# kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
-	
-	# tech requirements:
-	# https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-technical-requirements.md
-	# Unless you disable persistence (see configurationChoices.md), either your cluster must be configured to support Dynamic Volume Provision and you must have a DefaultStorageClass admission controller enabled or you must manually create any necessary PersistentVolumes when deploying the Helm chart.
-	# Endpoints of Kubernetes services must be able to loopback to themselves (the kubelet's hairpin-mode must not be none).
-}
-
-redeploy(){
-# k8s image build, redeploying
-# https://kind.sigs.k8s.io/docs/user/quick-start/#building-images
-# https://github.com/apache/openwhisk-deploy-kube/blob/master/docs/k8s-kind.md
-# https://github.com/apache/openwhisk-deploy-kube/blob/master/README.md#prerequisites-kubernetes-and-helm
-# in openwhisk dir
-bin/wskdev controller -b
-./gradlew distDocker
-set_stanza
-helm upgrade $owdev ./helm/openwhisk -n $openwhisk -f mycluster.yaml # using helm
-kind load docker-image whisk/controller # using kind
-}
-
 # (set_k8s_yaml)
 create_k8scluster(){
 	# ensure that Kubernetes is cloned in $(env PATH)/src/k8s.io/kubernetes
@@ -221,13 +188,6 @@ create_k8scluster(){
 	# kubectl logs owdev-init-couchdb-rcqp2 -n $openwhisk
 	# kubectl describe pod owdev-init-couchdb-2zhwh --namespace=$openwhisk
 
-
-			# ???
-			if [ ! -n "$docker_image_name_1" ]; then read -p "Your docker_image Name? :" docker_image_name_1; fi
-			kind load docker-image $docker_image_name_1 --name $cluster_name
-			# kind load docker-image $docker_image_name_1 $docker_image_name_2 --name $cluster_name
-			set_stanza
-
 	# kubectl apply -f $my-manifest-using-my-image:$image_version
 	# kind export logs $PWD/k8s_logs --name $cluster_name
 
@@ -242,21 +202,17 @@ set_openwhisk(){
     helm repo add openwhisk https://openwhisk.apache.org/charts # helm repo add stable https://charts.helm.sh/stable
     helm repo update
 
-    
     set_kind
     set_k8s_cli
     
-
     apiHostName=localhost
-    apiHostPort=31001 ???
+    apiHostPort=31001
     
     # set_k8s_yaml
     create_k8scluster
 
-	# (deploy_k8s) # ???
-
-    owdev=owdev ???  #deployment name # Your named release
-    openwhisk=openwhisk ???  #namespace
+    owdev=owdev  #deployment name # Your named release
+    openwhisk=openwhisk  #namespace
     # set $OPENWHISK_HOME to its top-level directory
     export OPENWHISK_HOME=$PWD/openwhisk-deploy-kube
 
@@ -299,16 +255,6 @@ if __name__ == "__main__":
 	main({ 
     	"name": "alex"})
 	print(main)' > hello.py
-}
-
-# ???
-set_manifest(){
-echo '		packages:
-		    default:
-		        actions:
-		            helloPy:
-		                function: hello.py
-                		runtime: python:3' > manifest.yaml
 }
 
 set_dockerfile(){
@@ -376,16 +322,16 @@ create_docker_image(){
 wsk_cli_create_invoke(){
 	set_pyfile
 	
-	pythonfile=hello.py ???
-	docker_user= ???
-	docker_image= ???
-	function_name=func_1 ???
-	dockerfile=vgg.Dockerfile ???
+	read -p "Your python file name? e.g. hello.py:" pythonfile; fi
+	read -p "Your Docker user name? :" docker_user; fi
+	read -p "Your Docker Image name? :" docker_image; fi
+	read -p "Your Openwhisk Function name? e.g. func_1:" function_name; fi
+	read -p "Your Dockerfile name? e.g. vgg.Dockerfile:" dockerfile; fi
 
         create_docker_image
 	
 	wsk -i action create $function_name --docker $docker_user/$docker_image:latest $pythonfile -d --web true --timeout 80000 # wsk action create $function_name $pythonfile
-	# wsk -i action update $function_name $pythonfile --timeout 100000
+	# wsk -i action update $function_name $pythonfile --timeout 80000
 	# wsk -i action update $function_name action.zip --main action_handler  \
 	#     --param model_url "$1" \
 	#     --param from_upper Eyes \
@@ -405,15 +351,11 @@ wsk_cli_create_invoke(){
 	# wsk -i action delete $function_name
 }
 
-# ???
-set_stanza(){
-# If you are using Kubernetes in Docker, it is straightforward to deploy local images by adding a stanza to your mycluster.yaml. 
-echo '
-controller:
-  imageName: "whisk/controller"
-  imageTag: "latest"' >> mycluster.yaml
-}
-
 clean_up(){
 	helm uninstall $owdev -n $openwhisk --keep-history
+}
+
+start(){
+set_openwhisk
+wsk_cli_create_invoke
 }
