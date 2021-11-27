@@ -385,7 +385,8 @@ wsk_cli_create_invoke(){
         create_docker_image
 	
 	wsk -i action create $function_name --docker $docker_user/$docker_image:latest $pythonfile -d --web true --timeout 80000 # wsk action create $function_name $pythonfile
-	# wsk action update smart_body_crop action.zip --main action_handler  \
+	# wsk -i action update $function_name $pythonfile --timeout 100000
+	# wsk -i action update $function_name action.zip --main action_handler  \
 	#     --param model_url "$1" \
 	#     --param from_upper Eyes \
 	#     --param to_lower Hips \
