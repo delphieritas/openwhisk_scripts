@@ -390,25 +390,25 @@ create_docker_image(){
 }
 
 create_invoke_wsk_action(){
-	wsk -i action create $function_name --docker $docker_user/$docker_image:latest $pythonfile -d --web true --timeout 80000 # wsk action create $function_name $pythonfile
-	# wsk -i action update $function_name $pythonfile --timeout 80000
-	# wsk -i action update $function_name action.zip --main action_handler  \
+	wsk -i action create $action_name --docker $docker_user/$docker_image:latest $pythonfile -d --web true --timeout 80000 # wsk action create $action_name $pythonfile
+	# wsk -i action update $action_name $pythonfile --timeout 80000
+	# wsk -i action update $action_name action.zip --main action_handler  \
 	#     --param model_url "$1" \
 	#     --param from_upper Eyes \
 	#     --param to_lower Hips \
 	#     --memory 3891 \
 	#     --docker adobeapiplatform/openwhisk-python3aiaction:0.11.0
 
-	wsk -i action invoke $function_name -b --param name "alex" --debug \
+	wsk -i action invoke $action_name -b --param name "alex" --debug \
 	--result
 	# !wsk action invoke smart_body_crop --param image "https://i.pinimg.com/236x/17/1c/a6/171ca6b06111529aa6f10b1f4e418339--style-men-my-style.jpg" \
 	#   --param from_upper Eyes --param to_lower Elbows
 
 	# https://github.com/apache/openwhisk/blob/master/docs/actions.md
 
-	action_id=`wsk activation list -i |grep $function_name | awk '{print $3}'`
+	action_id=`wsk activation list -i |grep $action_name | awk '{print $3}'`
 	wsk activation get -i $action_id # wsk activation result -i <ID> # wsk activation logs -i <ID> # wsk activation get -i --last
-	# wsk -i action delete $function_name
+	# wsk -i action delete $action_name
 }
 
 #(set_pyfile)
@@ -418,7 +418,7 @@ wsk_cli_create_invoke(){
 	if [ ! -n "$pythonfile" ]; then read -p "Your python file name? e.g. hello.py:" pythonfile; fi
 	if [ ! -n "$docker_user" ]; then read -p "Your Docker user name? :" docker_user; fi
 	if [ ! -n "$docker_image" ]; then read -p "Your Docker Image name? :" docker_image; fi
-	if [ ! -n "$function_name" ]; then read -p "Your Openwhisk Function name? e.g. func_1:" function_name; fi
+	if [ ! -n "$action_name" ]; then read -p "Your Openwhisk Action name? e.g. func_1:" action_name; fi
 	if [ ! -n "$dockerfile" ]; then read -p "Your Dockerfile name? e.g. vgg.Dockerfile:" dockerfile; fi
 
         create_docker_image
@@ -430,7 +430,31 @@ clean_up(){
 	helm uninstall $owdev -n $openwhisk --keep-history
 }
 
+print_usage() {
+  printf "Usage: bash start_with_flags.sh -flag1 <val1> -flag2 <val2> ....
+  e.g. :
+  bash start_with_flags.sh -c 280277xxxxxx -r us-east-1 -a AKIAIOSFODNN7EXAMPLE -s wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY -t csgmcmc_random_lambda_trigger -w csgmcmc_random_lambda -p sudoPolicy -d cifar10 -e 100 -n 1
+"
+}
+
 start(){
+if [ ! -n "$1" ] ;then
+print_usage
+exit 1;
+fi
+
+while getopts 'c:f:i:u:a:p:' flag; do
+  case "${flag}" in
+    c) cluster_name="${OPTARG}" ;;
+    f) dockerfile="${OPTARG}" ;;
+    i) docker_image="${OPTARG}" ;;
+    u) docker_user="${OPTARG}" ;;
+    a) action_name="${OPTARG}" ;;
+    p) pythonfile="${OPTARG}" ;;
+    *) print_usage;;
+  esac
+done
+
 set_openwhisk
 wsk_cli_create_invoke
 }
