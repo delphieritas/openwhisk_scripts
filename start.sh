@@ -193,7 +193,7 @@ set_wsk_cli(){
 
 config_wsk_cli(){
     # External to the Kubernetes cluster, using wsk cli
-    set_wsk_cli
+    # set_wsk_cli
 
     # https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/README.md
     WHISK_SERVER=$apiHostName:$apiHostPort
@@ -271,14 +271,18 @@ deploy_wsk_cluster(){
     # helm uninstall $owdev --namespace $openwhisk
 }
 
-set_openwhisk(){
-    
+set_tools(){
     set_helm3
-
+    set_wsk_cli
+    
     set_kind
     set_k8s_cli
     set_k8s
-    
+}
+
+set_openwhisk(){
+    set_tools
+
     apiHostName=localhost
     apiHostPort=31001
     
