@@ -394,6 +394,7 @@ create_docker_image(){
 }
 
 create_invoke_wsk_action(){
+# the CLI flag --web true this command will add both annotations web-export=true and final=true. https://github.com/apache/openwhisk/blob/59b67fe96f44e573f3348afed966a1cdaf80ddf2/docs/rest_api.md
 	wsk -i action create $action_name --docker $docker_user/$docker_image:latest $pythonfile -d --web true --timeout 80000 # wsk action create $action_name $pythonfile
 	# wsk -i action update $action_name $pythonfile --timeout 80000
 	# wsk -i action update $action_name action.zip --main action_handler  \
@@ -430,6 +431,27 @@ wsk_cli_create_invoke(){
 	create_invoke_wsk_action
 }
 
+rest_api(){
+wsk list -i
+wsk list -v -i
+wsk namespace list -v -i
+if [ ! -n "$apiHostName" ]; then read -p "Your api host name? e.g. localhost" apiHostName; fi # apiHostName=localhost
+if [ ! -n "$apiHostPort" ]; then read -p "Your api host port? e.g. 31001:" apiHostPort; fi # apiHostPort=31001
+if [ ! -n "$openwhisk" ]; then read -p "Your namespace? e.g. openwhisk:" openwhisk; fi # openwhisk=openwhisk  # default / _
+if [ ! -n "$action_name" ]; then read -p "Your Openwhisk Action name? e.g. func_1:" action_name; fi
+if [ ! -n "$inputs" ]; then read -p "Your inputs? e.g. '{\"name\":\"John\"}':" inputs; fi # inputs='{"name":"John"}'
+APIHOST=$apiHostName:$apiHostPort 
+namespace=$openwhisk
+# https://github.com/apache/openwhisk/blob/master/docs/rest_api.md
+curl -insecure "https://$APIHOST/api/v1/namespaces/${namespace}/actions/${action_name}?blocking=true&result=true" -X POST -H "Content-Type: application/json" -d ${inputs}
+
+# https://github.com/apache/openwhisk/blob/master/docs/webactions.md
+# curl -insecure https://${APIHOST}/api/v1/web/${namespace}/default/${action_name}.json?name=Jane
+# curl -insecure https://${APIHOST}/api/v1/web/${namespace}/default/${action_name}.json -H 'Content-Type: text/plain' -d "Jane"
+# AUTH=`wsk -i property get --auth`
+# curl -u $AUTH 
+}
+
 clean_up(){
 	helm uninstall $owdev -n $openwhisk --keep-history
 }
@@ -461,4 +483,6 @@ done
 
 set_openwhisk
 wsk_cli_create_invoke
+rest_api
+# clean_up
 }
