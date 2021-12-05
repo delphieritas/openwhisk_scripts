@@ -3,6 +3,10 @@
 #
 # Production  _MUST_ override the default credentials in whisk.auth and db.auth.
 #
+# The main components of the OpenWhisk platform are 
+# a front-end that provides a REST API to the user and the wsk CLI, 
+# a CouchDB instance that stores user and system data, and 
+# a control plane that is responsible for scheduling incoming invocations of user actions onto dedicated k8s worker nodes that have been labeled as "invoker nodes".
 
 whisk:
   # Ingress defines how to access OpenWhisk from outside the Kubernetes cluster.
@@ -159,18 +163,18 @@ docker:
 #     dataDir: "/data"
 #     dataLogDir: "/datalog"
 
-# # kafka configurations
-# kafka:
-#   external: false
-#   imageName: "wurstmeister/kafka"
-#   imageTag: "2.12-2.3.1"
-#   imagePullPolicy: "IfNotPresent"
-#   replicaCount: 1
-#   restartPolicy: "Always"
-#   connect_string: null
-#   port: 9092
-#   persistence:
-#     size: 512Mi
+# kafka configurations
+kafka:
+  external: false
+  imageName: "wurstmeister/kafka"
+  imageTag: "2.12-2.3.1"
+  imagePullPolicy: "IfNotPresent"
+  replicaCount: 1
+  restartPolicy: "Always"
+  connect_string: null
+  port: 9092
+  persistence:
+    size: 512Mi
 
 # # Database configuration
 # db:
@@ -417,24 +421,24 @@ toleration:
 #        in future all components probes timing settings should be configured here.
 
 probes:
-#   zookeeper:
-#     livenessProbe:
-#       initialDelaySeconds: 5
-#       periodSeconds: 10
-#       timeoutSeconds: 1
-#     readinessProbe:
-#       initialDelaySeconds: 5
-#       periodSeconds: 10
-#       timeoutSeconds: 1
-#   kafka:
-#     livenessProbe:
-#       initialDelaySeconds: 5
-#       periodSeconds: 10
-#       timeoutSeconds: 1
-#     readinessProbe:
-#       initialDelaySeconds: 5
-#       periodSeconds: 10
-#       timeoutSeconds: 5
+  zookeeper:
+    livenessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 1
+    readinessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 1
+  kafka:
+    livenessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 1
+    readinessProbe:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 5
   controller:
     livenessProbe:
       initialDelaySeconds: 10
