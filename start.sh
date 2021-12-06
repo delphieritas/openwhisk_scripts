@@ -56,11 +56,11 @@ set_k8s(){
 # https://techexpert.tips/kubernetes/kubernetes-installation-ubuntu-linux/
 if (! kubectl version | grep 'Server Version: ' ); then 
 kubeadm config images pull
-export KUBECONFIG=/etc/kubernetes/admin.conf
+# export KUBECONFIG=/etc/kubernetes/admin.conf
 
 # init k8s cluster
 cidr=10.244.0.0/16
-kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
+sudo kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
 
 mkdir -p $HOME/.kube
 cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -199,9 +199,9 @@ config_wsk_cli(){
     WHISK_SERVER=$apiHostName:$apiHostPort
     WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
     # To configure your wsk cli to connect to it, set the apihost property
-    wsk property set --apihost $WHISK_SERVER  namespace $openwhisk # --auth $WHISK_AUTH
-    wsk list -v
-    wsk property -i get
+    wsk property set --apihost $WHISK_SERVER  #--auth $WHISK_AUTH 
+    wsk list -v -i
+    wsk property -i get #> namespace == guest
 }
 
 set_k8s_cli(){
@@ -219,7 +219,7 @@ if ( ! kubectl version --client ); then
 	curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${RELEASE}/bin/linux/${ARCH}/{kubeadm,kubelet,kubectl}
 	chmod +x {kubeadm,kubelet,kubectl}
 	export PATH=$PATH:$PWD
-        chown $(id -u):$(id -g) /etc/kubernetes/ #admin.conf
+        chown $(id -u):$(id -g) /etc/kubernetes/ #admin.conf -R
         export KUBECONFIG=/etc/kubernetes/admin.conf  # https://k21academy.com/docker-kubernetes/the-connection-to-the-server-localhost8080-was-refused/
         # export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
         # echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> $HOME/.bashrc
@@ -239,9 +239,10 @@ create_k8scluster(){
 	kind create cluster --name $cluster_name --config $PWD/k8s.yaml # --image=... --wait 30s --wait 10m 
 	
 	# kind delete clusters $cluster_name
+	kubectl get services #-n kube-system    ## owdev-, owdev-couchdb, owdev-controller, owdev-apigateway
 	kubectl cluster-info --context kind-$cluster_name
-	kubectl get nodes # kind get clusters
-	kubectl get services #-n kube-system
+	kubectl get nodes # kind get clusters   ## cluster0-control-plane, cluster0-worker
+
 	
 	docker ps -a
 	# docker logs -f <container_id>
@@ -277,7 +278,7 @@ set_tools(){
     
     set_kind
     set_k8s_cli
-    set_k8s
+    # (set_k8s)
 }
 
 set_openwhisk(){
@@ -297,6 +298,8 @@ set_openwhisk(){
 
     # Once the 'owdev-install-packages' Pod is in the `Completed` state, your OpenWhisk deployment is ready to be used.
     kubectl get pods -o wide -A # kubectl get po -A  # kubectl get pods -n $openwhisk --watch    
+    
+    # wsk CLI namespace `guest` !
 
     # kubectl logs <$pod_name> -n $openwhisk
     # kubectl describe pod <$pod_name>  --namespace=$openwhisk
@@ -307,7 +310,7 @@ set_openwhisk(){
 	## https://blog.csdn.net/qq_38415505/article/details/83687207
 	## blog.csdn.net/Dashi_Lu/article/details/89641778
     
-    # docker ps
+    docker ps
     kubectl describe node $cluster_name-worker  | grep InternalIP: | awk '{print $2}'
     config_wsk_cli
 
@@ -431,6 +434,18 @@ wsk_cli_create_invoke(){
 	create_invoke_wsk_action
 }
 
+debug(){
+kubectl get pods -o wide -A
+
+worker_container_id=`docker ps -a|grep $cluster_name-worker | awk '{print $1}'` && echo $worker_container_id
+docker logs -f $worker_container_id
+
+kubectl get pods -o wide -A |grep $cluster_name-worker |grep Error |awk '{print $2}'
+# kubectl describe pod [pod-name]
+# kubectl describe  [pod-name]
+# kubectl exec [pod-name] -it sh
+}
+
 rest_api(){
 wsk list -i
 wsk list -v -i
@@ -441,9 +456,10 @@ if [ ! -n "$openwhisk" ]; then read -p "Your namespace? e.g. openwhisk:" openwhi
 if [ ! -n "$action_name" ]; then read -p "Your Openwhisk Action name? e.g. func_1:" action_name; fi
 if [ ! -n "$inputs" ]; then read -p "Your inputs? e.g. '{\"name\":\"John\"}':" inputs; fi # inputs='{"name":"John"}'
 APIHOST=$apiHostName:$apiHostPort 
-namespace=$openwhisk
+namespace=_
 # https://github.com/apache/openwhisk/blob/master/docs/rest_api.md
 curl -insecure "https://$APIHOST/api/v1/namespaces/${namespace}/actions/${action_name}?blocking=true&result=true" -X POST -H "Content-Type: application/json" -d ${inputs}
+curl -insecure "https://$apiHostName:$apiHostPort/api/v1/namespaces/${namespace}/actions/${action_name}?blocking=true&result=false"
 
 # https://github.com/apache/openwhisk/blob/master/docs/webactions.md
 # curl -insecure https://${APIHOST}/api/v1/web/${namespace}/default/${action_name}.json?name=Jane
@@ -453,7 +469,9 @@ curl -insecure "https://$APIHOST/api/v1/namespaces/${namespace}/actions/${action
 }
 
 clean_up(){
+        wsk -i action delete $action_name
 	helm uninstall $owdev -n $openwhisk #--keep-history
+	kind delete clusters $cluster_name
 }
 
 print_usage() {
@@ -483,6 +501,7 @@ done
 
 set_openwhisk
 wsk_cli_create_invoke
+# debug
 rest_api
 # clean_up
 }
