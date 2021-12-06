@@ -11,7 +11,7 @@ import time
 action_start_time = time.time()
 
 def main(args):
-    request = args.get("request", "https://github.com/pytorch/hub/raw/master/images/dog.jpg")
+    url = args.get("url", "https://github.com/pytorch/hub/raw/master/images/dog.jpg")
     filename = args.get("filename", "dog.jpg")
     # url, filename = (request, "dog.jpg")
     urllib.request.urlretrieve(url, filename)
@@ -38,7 +38,7 @@ def main(args):
         inf_start_time = time.time()
         output = model(input_batch)
         inf_time = time.time() - inf_start_time
-        print('Inference Time: ',inf_end_time)
+        print('Inference Time: ',inf_time)
 
     # Tensor of shape 1000, with confidence scores over Imagenet's 1000 classes
     # print(output[0])
@@ -47,7 +47,7 @@ def main(args):
     probabilities = torch.nn.functional.softmax(output[0], dim=0)
     # print(probabilities)
 
-    # Download ImageNet labels
+    # Download ImageNet labels to '/notebooks'
 
     # Read the categories
     with open("/notebooks/imagenet_classes.txt", "r") as f:
@@ -61,4 +61,4 @@ def main(args):
     return {'inf_time': str(inf_time), 'action_time': str(action_time)}
 
 if __name__ == '__main__':
-    main({'request': 'https://github.com/pytorch/hub/raw/master/images/dog.jpg', 'filename': 'dog.jpg'})
+    main({'url': 'https://github.com/pytorch/hub/raw/master/images/dog.jpg', 'filename': 'dog.jpg'})
