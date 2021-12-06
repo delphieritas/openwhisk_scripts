@@ -414,7 +414,9 @@ create_invoke_wsk_action(){
 
 	action_id=`wsk activation list -i |grep $action_name | awk '{print $3}'`
 	action_id=`echo $action_id | awk '{print $1}'` && echo $action_id
-	wsk activation get -i $action_id # wsk activation result -i <ID> # wsk activation logs -i <ID> # wsk activation get -i --last
+	wsk activation result -i $action_id
+	wsk activation logs -i $action_id
+	# wsk activation get -i $action_id  # wsk activation get -i --last
 	# wsk -i action delete $action_name
 }
 
@@ -434,20 +436,24 @@ wsk_cli_create_invoke(){
 }
 
 debug(){
+# Debug K8s cluster nodes 
 kubectl get pods -o wide -A
 
+# Debug containers
 worker_container_id=`docker ps -a|grep $cluster_name-worker | awk '{print $1}'` && echo $worker_container_id
 docker logs -f $worker_container_id
 
+# Debug K8s cluster nodes / pod
 pod_name=`kubectl get pods -o wide -A |grep $cluster_name-worker |grep Error |awk '{print $2}'` && echo $pod_name
-# kubectl describe pod [pod-name]
-# kubectl describe  [pod-name]
+# kubectl describe pod [pod-name] # kubectl describe  [pod-name]
 # kubectl exec [pod-name] -it sh
-
 kubectl logs $pod_name -n $openwhisk
 # kubectl describe pod $pod_name --namespace=$openwhisk
 # kubectl apply -f $my-manifest-using-my-image:$image_version
-kind export logs $PWD/k8s_logs --name $cluster_name
+# kind export logs $PWD/k8s_logs_$cluster_name --name $cluster_name
+
+# Debug actions
+wsk activation get -i $action_id  # wsk activation get -i --last
 }
 
 rest_api(){
