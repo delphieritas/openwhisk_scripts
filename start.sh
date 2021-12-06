@@ -356,8 +356,8 @@ RUN echo 'alias python=python3.9' >> ~/.bashrc && echo 'alias pip=pip3.9' >> ~/.
 
 RUN pip3.9 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 
-COPY hello.py .
-RUN chmod +x *" > $dockerfile.Dockerfile
+#COPY *.py ./
+#RUN chmod +x *" > $dockerfile.Dockerfile
 #----------------
 # echo"FROM openwhisk/python3aiaction:latest
 
@@ -387,7 +387,7 @@ create_docker_image(){
 	set_dockerfile
 
 	docker build -t $docker_image -f $dockerfile.Dockerfile $PWD
-	# # docker run -it  $docker_image bash
+	# # docker run -v $PWD:/notebooks -it $docker_image bash
 	docker image tag $docker_image $docker_user/$docker_image
 	docker push $docker_user/$docker_image:latest
 	# docker pull $docker_user/$docker_image:latest
