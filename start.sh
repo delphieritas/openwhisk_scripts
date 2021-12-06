@@ -405,8 +405,8 @@ create_invoke_wsk_action(){
 	#     --memory 3891 \
 	#     --docker adobeapiplatform/openwhisk-python3aiaction:0.11.0
 
-	wsk -i action invoke $action_name -b --param name "alex" --debug \
-	--result
+	# wsk -i action invoke $action_name -b --param name "alex" --debug \ # InitTime, response.result, response.status,  
+	time wsk -i action invoke $action_name -b --param name "alex"  # real 0m34,832s  user 0m0,113s  sys 0m0,080s
 	# !wsk action invoke smart_body_crop --param image "https://i.pinimg.com/236x/17/1c/a6/171ca6b06111529aa6f10b1f4e418339--style-men-my-style.jpg" \
 	#   --param from_upper Eyes --param to_lower Elbows
 
@@ -414,7 +414,7 @@ create_invoke_wsk_action(){
 
 	action_id=`wsk activation list -i |grep $action_name | awk '{print $3}'`
 	action_id=`echo $action_id | awk '{print $1}'` && echo $action_id
-	wsk activation result -i $action_id
+	wsk activation result -i $action_id # time wsk -i action invoke $action_name -b --param name "alex" --result
 	wsk activation logs -i $action_id
 	# wsk activation get -i $action_id  # wsk activation get -i --last
 	# wsk -i action delete $action_name
@@ -469,13 +469,12 @@ APIHOST=$apiHostName:$apiHostPort
 namespace=_
 # https://github.com/apache/openwhisk/blob/master/docs/rest_api.md
 curl -insecure "https://$APIHOST/api/v1/namespaces/${namespace}/actions/${action_name}?blocking=true&result=true" -X POST -H "Content-Type: application/json" -d ${inputs}
-curl -insecure "https://$apiHostName:$apiHostPort/api/v1/namespaces/${namespace}/actions/${action_name}?blocking=true&result=false"
 
 # https://github.com/apache/openwhisk/blob/master/docs/webactions.md
 # curl -insecure https://${APIHOST}/api/v1/web/${namespace}/default/${action_name}.json?name=Jane
 # curl -insecure https://${APIHOST}/api/v1/web/${namespace}/default/${action_name}.json -H 'Content-Type: text/plain' -d "Jane"
-# AUTH=`wsk -i property get --auth`
-# curl -u $AUTH 
+AUTH=`wsk -i property get --auth |  awk '{print $3}'`
+# curl -u $AUTH
 }
 
 clean_up(){
