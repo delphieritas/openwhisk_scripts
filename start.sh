@@ -413,6 +413,7 @@ create_invoke_wsk_action(){
 	# https://github.com/apache/openwhisk/blob/master/docs/actions.md
 
 	action_id=`wsk activation list -i |grep $action_name | awk '{print $3}'`
+	action_id=`echo $action_id | awk '{print $1}'` && echo $action_id
 	wsk activation get -i $action_id # wsk activation result -i <ID> # wsk activation logs -i <ID> # wsk activation get -i --last
 	# wsk -i action delete $action_name
 }
