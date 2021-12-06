@@ -147,10 +147,10 @@ echo "whisk:
     apiHostPort: $apiHostPort
 #    useInternally: false
 nginx:
-  httpsNodePort: $apiHostPort" > mycluster.yaml 
+  httpsNodePort: $apiHostPort" > wsk.yaml 
 
-# create a default mycluster.yaml for a single worker node
-# If your cluster has a single worker node, then you should configure OpenWhisk without node affinity. This is done by adding the following lines to your mycluster.yaml https://github.com/apache/openwhisk-deploy-kube/blob/master/README.md#initial-setup https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/README.md
+# create a default wsk.yaml for a single worker node
+# If your cluster has a single worker node, then you should configure OpenWhisk without node affinity. This is done by adding the following lines to your wsk.yaml https://github.com/apache/openwhisk-deploy-kube/blob/master/README.md#initial-setup https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/README.md
 echo '# disable affinity
 affinity:
  enabled: false
@@ -160,21 +160,21 @@ invoker:
  options: \"-Dwhisk.kubernetes.user-pod-node-affinity.enabled=false\"
  # must use KCF as kind uses containerd as its container runtime
  containerFactory:
-   impl: \"kubernetes\" ' >> mycluster.yaml
+   impl: \"kubernetes\" ' >> wsk.yaml
 # -------- or ---------
 # echo '
 # invoker:
 #  # must use KCF as kind uses containerd as its container runtime
 #  containerFactory:
 #    impl: \"kubernetes\" 
-# ' >> mycluster.yaml
+# ' >> wsk.yaml
 # https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/docs/k8s-kind.md#configuring-openwhisk https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/docs/configurationChoices.md
 # https://github.com/apache/openwhisk-deploy-kube/issues/311 https://github.com/apache/openwhisk-deploy-kube/issues/226
 # --------------------
 # Decoupling the database
 # https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/docs/configurationChoices.md
 # echo 'db:
-#   wipeAndInit: false' >> mycluster.yaml
+#   wipeAndInit: false' >> wsk.yaml
 }
 
 set_wsk_cli(){
@@ -199,7 +199,7 @@ config_wsk_cli(){
     WHISK_SERVER=$apiHostName:$apiHostPort
     WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
     # To configure your wsk cli to connect to it, set the apihost property
-    wsk property set --apihost $WHISK_SERVER   # --auth $WHISK_AUTH
+    wsk property set --apihost $WHISK_SERVER  namespace $openwhisk # --auth $WHISK_AUTH
     wsk list -v
     wsk property -i get
 }
@@ -260,14 +260,14 @@ deploy_wsk_cluster(){
     helm repo add openwhisk https://openwhisk.apache.org/charts # helm repo add stable https://charts.helm.sh/stable
     helm repo update
     set_wsk_yaml
-    helm install $owdev $openwhisk/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml # helm ls # helm status $owdev -n $openwhisk
+    helm install $owdev $openwhisk/openwhisk -n $openwhisk --create-namespace -f wsk.yaml # helm ls # helm status $owdev -n $openwhisk
     #----------- or using git --------------
     # set_git
     # git clone https://github.com/apache/openwhisk-deploy-kube.git
     ## set $OPENWHISK_HOME to its top-level directory
     # export OPENWHISK_HOME=$PWD/openwhisk-deploy-kube
-    # helm install $owdev $OPENWHISK_HOME/helm_repo/openwhisk -n $openwhisk --create-namespace -f mycluster.yaml 
-    # helm upgrade $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk -f mycluster.yaml 
+    # helm install $owdev $OPENWHISK_HOME/helm_repo/openwhisk -n $openwhisk --create-namespace -f wsk.yaml 
+    # helm upgrade $owdev $OPENWHISK_HOME/helm/openwhisk -n $openwhisk -f wsk.yaml 
     # helm uninstall $owdev --namespace $openwhisk
 }
 
@@ -453,7 +453,7 @@ curl -insecure "https://$APIHOST/api/v1/namespaces/${namespace}/actions/${action
 }
 
 clean_up(){
-	helm uninstall $owdev -n $openwhisk --keep-history
+	helm uninstall $owdev -n $openwhisk #--keep-history
 }
 
 print_usage() {
