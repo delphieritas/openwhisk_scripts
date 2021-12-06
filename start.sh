@@ -252,8 +252,6 @@ create_k8scluster(){
 
 	# kubectl apply -f $my-manifest-using-my-image:$image_version
 	# kind export logs $PWD/k8s_logs --name $cluster_name
-
-	# must use the KubernetesContainerFactory when running OpenWhisk on kind
 }
 
 deploy_wsk_cluster(){
@@ -440,10 +438,15 @@ kubectl get pods -o wide -A
 worker_container_id=`docker ps -a|grep $cluster_name-worker | awk '{print $1}'` && echo $worker_container_id
 docker logs -f $worker_container_id
 
-kubectl get pods -o wide -A |grep $cluster_name-worker |grep Error |awk '{print $2}'
+pod_name=`kubectl get pods -o wide -A |grep $cluster_name-worker |grep Error |awk '{print $2}'` && echo $pod_name
 # kubectl describe pod [pod-name]
 # kubectl describe  [pod-name]
 # kubectl exec [pod-name] -it sh
+
+kubectl logs $pod_name -n $openwhisk
+# kubectl describe pod $pod_name --namespace=$openwhisk
+# kubectl apply -f $my-manifest-using-my-image:$image_version
+kind export logs $PWD/k8s_logs --name $cluster_name
 }
 
 rest_api(){
