@@ -62,10 +62,6 @@ kubeadm config images pull
 cidr=10.244.0.0/16
 sudo kubeadm init --pod-network-cidr=$cidr --apiserver-advertise-address=10.0.15.10 #--kubernetes-version "1.21.0"
 
-mkdir -p $HOME/.kube
-cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-chown $(id -u):$(id -g) $HOME/.kube/config # chown 1033:2000 /dir
-chmod 644 /etc/kubernetes/admin.conf
 # In order to set up the Kubernetes Linux servers, disabling the swap memory on each server
 swapon -s
 swapoff –a
@@ -221,6 +217,12 @@ if ( ! kubectl version --client ); then
 	export PATH=$PATH:$PWD
         chown $(id -u):$(id -g) /etc/kubernetes/ #admin.conf -R
         export KUBECONFIG=/etc/kubernetes/admin.conf  # https://k21academy.com/docker-kubernetes/the-connection-to-the-server-localhost8080-was-refused/
+	# mkdir -p $HOME/.kube
+	# cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+	# chown $(id -u):$(id -g) $HOME/.kube/config # chown 1033:2000 /dir
+	# chmod 644 /etc/kubernetes/admin.conf
+	# export KUBECONFIG=/etc/kubernetes/admin.conf
+	
         # export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
         # echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> $HOME/.bashrc
         #curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x kubectl && export PATH=$PATH:$PWD && cd ..
