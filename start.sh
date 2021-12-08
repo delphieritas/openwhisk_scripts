@@ -415,9 +415,12 @@ create_invoke_wsk_action(){
 
 	action_id=`wsk activation list -i |grep $action_name | awk '{print $3}'`
 	action_id=`echo $action_id | awk '{print $1}'` && echo $action_id
+	# To get function return outs
 	wsk activation result -i $action_id # time wsk -i action invoke $action_name -b --param name "alex" --result
+	# To get function print outs
 	wsk activation logs -i $action_id
-	# wsk activation get -i $action_id  # wsk activation get -i --last
+	# To get action detailed logs
+	wsk activation get -i $action_id  # wsk activation get -i --last
 	# wsk -i action delete $action_name
 }
 
