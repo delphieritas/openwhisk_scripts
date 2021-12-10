@@ -284,6 +284,7 @@ set_tools(){
 set_openwhisk(){
     set_tools
 
+    # docker ps -a ## 0.0.0.0:31001->31001/tcp    cluster0-worker
     apiHostName=localhost
     apiHostPort=31001
     
