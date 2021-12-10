@@ -210,20 +210,18 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add # cu
 
 if ( ! kubectl version --client ); then 
 	# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+	# https://tipsfordev.com/kubectl-get-the-connection-to-the-server-localhost-8080-was-refused-kubernetes
 	RELEASE="$(curl -sSL https://dl.k8s.io/release/stable.txt)"
 	ARCH="amd64"
 	curl -L --remote-name-all https://storage.googleapis.com/kubernetes-release/release/${RELEASE}/bin/linux/${ARCH}/{kubeadm,kubelet,kubectl}
 	chmod +x {kubeadm,kubelet,kubectl}
 	export PATH=$PATH:$PWD
-        chown $(id -u):$(id -g) /etc/kubernetes/ #admin.conf -R
+        chown $(id -u):$(id -g) /etc/kubernetes/ #admin.conf -R  # chmod 644 /etc/kubernetes/admin.conf
         export KUBECONFIG=/etc/kubernetes/admin.conf  # https://k21academy.com/docker-kubernetes/the-connection-to-the-server-localhost8080-was-refused/
-	# mkdir -p $HOME/.kube
-	# cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-	# chown $(id -u):$(id -g) $HOME/.kube/config # chown 1033:2000 /dir
-	# chmod 644 /etc/kubernetes/admin.conf
-	# export KUBECONFIG=/etc/kubernetes/admin.conf
-	
-        # export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+	# cp -i /etc/kubernetes/admin.conf $HOME/admin.conf
+	# chown $(id -u):$(id -g) $HOME/admin.conf # chown 1033:2000 /dir
+	# export KUBECONFIG=$HOME/admin.conf
+
         # echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> $HOME/.bashrc
         #curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x kubectl && export PATH=$PATH:$PWD && cd ..
 	#apt-get update && apt-get -y upgrade && apt-get install software-properties-common python-software-properties # apt-get install apt-file && apt-file update -y # apt-file search add-apt-repository
