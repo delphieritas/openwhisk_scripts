@@ -196,8 +196,8 @@ config_wsk_cli(){
     WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
     # To configure your wsk cli to connect to it, set the apihost property
     wsk property set --apihost $WHISK_SERVER  #--auth $WHISK_AUTH 
-    wsk list -v -i
-    wsk property -i get #> namespace == guest
+    wsk -i list -v
+    wsk -i property get #> namespace == guest
 }
 
 set_k8s_cli(){
@@ -414,14 +414,14 @@ create_invoke_wsk_action(){
 
 	# https://github.com/apache/openwhisk/blob/master/docs/actions.md
 
-	action_id=`wsk activation list -i |grep $action_name | awk '{print $3}'`
+	action_id=`wsk -i activation list |grep $action_name | awk '{print $3}'`
 	action_id=`echo $action_id | awk '{print $1}'` && echo $action_id
 	# To get function return outs
-	wsk activation result -i $action_id # time wsk -i action invoke $action_name -b --param name "alex" --result
+	wsk -i activation result $action_id # time wsk -i action invoke $action_name -b --param name "alex" --result
 	# To get function print outs
-	wsk activation logs -i $action_id
+	wsk -i activation logs $action_id
 	# To get action detailed logs
-	wsk activation get -i $action_id  # wsk activation get -i --last
+	wsk -i activation get $action_id  # wsk -i activation get --last
 	# wsk -i action delete $action_name
 }
 
@@ -458,13 +458,13 @@ kubectl logs $pod_name -n $openwhisk
 # kind export logs $PWD/k8s_logs_$cluster_name --name $cluster_name
 
 # Debug actions
-wsk activation get -i $action_id  # wsk activation get -i --last
+wsk -i activation get $action_id  # wsk -i activation get --last
 }
 
 rest_api(){
-wsk list -i
-wsk list -v -i
-wsk namespace list -v -i
+wsk -i list
+wsk -i list -v
+wsk -i namespace list -v
 if [ ! -n "$apiHostName" ]; then read -p "Your api host name? e.g. localhost" apiHostName; fi # apiHostName=localhost
 if [ ! -n "$apiHostPort" ]; then read -p "Your api host port? e.g. 31001:" apiHostPort; fi # apiHostPort=31001
 if [ ! -n "$openwhisk" ]; then read -p "Your namespace? e.g. openwhisk:" openwhisk; fi # openwhisk=openwhisk  # default / _
