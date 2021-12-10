@@ -208,7 +208,7 @@ set_curl
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add # curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 
 if ( ! kubectl version --client ); then 
-	# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+	# https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
 	# https://tipsfordev.com/kubectl-get-the-connection-to-the-server-localhost-8080-was-refused-kubernetes
 	RELEASE="$(curl -sSL https://dl.k8s.io/release/stable.txt)"
 	ARCH="amd64"
