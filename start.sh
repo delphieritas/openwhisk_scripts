@@ -196,7 +196,6 @@ config_wsk_cli(){
     WHISK_AUTH=23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
     # To configure your wsk cli to connect to it, set the apihost property
     wsk property set --apihost $WHISK_SERVER  #--auth $WHISK_AUTH 
-    wsk -i list -v
     wsk -i property get #> namespace == guest
 }
 
@@ -406,12 +405,10 @@ create_invoke_wsk_action(){
 	#     --memory 3891 \
 	#     --docker adobeapiplatform/openwhisk-python3aiaction:0.11.0
 
-	# wsk -i action invoke $action_name -b --param name "alex" --debug \ # InitTime, response.result, response.status, 
+	# wsk -i action invoke $action_name -b --param name "alex" --debug  # InitTime, response.result, response.status, 
 	# https://stackoverflow.com/questions/556405/what-do-real-user-and-sys-mean-in-the-output-of-time1/556411#556411
-	time wsk -i action invoke $action_name -b --param name "alex"  # real 0m34,832s  user 0m0,113s  sys 0m0,080s
-	# !wsk action invoke smart_body_crop --param image "https://i.pinimg.com/236x/17/1c/a6/171ca6b06111529aa6f10b1f4e418339--style-men-my-style.jpg" \
-	#   --param from_upper Eyes --param to_lower Elbows
-
+	wsk -i list # wsk -i list -v
+	time wsk -i action invoke $action_name -b --param name "alex"  # real 0m34,832s  user 0m0,113s  sys 0m0,080s  ## --param image "https://i.pinimg.com/236x/17/1c/a6/171ca6b06111529aa6f10b1f4e418339--style-men-my-style.jpg"  --param from_upper Eyes --param to_lower Elbows
 	# https://github.com/apache/openwhisk/blob/master/docs/actions.md
 
 	action_id=`wsk -i activation list |grep $action_name | awk '{print $3}'`
