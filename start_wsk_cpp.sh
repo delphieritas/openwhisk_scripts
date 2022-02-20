@@ -179,7 +179,7 @@ create_k8scluster(){
 
 deploy_wsk_cluster(){
     # add a chart repository
-    helm repo add openwhisk https://openwhisk.apache.org/charts # helm repo add stable https://charts.helm.sh/stable
+    helm repo add openwhisk https://openwhisk.apache.org/charts
     helm repo update
     set_wsk_yaml
     helm install $owdev $openwhisk/openwhisk -n $openwhisk --create-namespace -f wsk.yaml 
@@ -197,7 +197,7 @@ set_tools(){
 set_openwhisk(){
     set_tools
 
-    # docker ps -a ## 0.0.0.0:31001->31001/tcp
+    # docker ps -a 
     apiHostName=localhost
     apiHostPort=31001
 
@@ -216,10 +216,7 @@ set_openwhisk(){
     # kubectl describe node $cluster_name-worker  | grep InternalIP: | awk '{print $2}'
     config_wsk_cli
 
-    # kubectl label nodes --all openwhisk-role=invoker # for single node in the cluster https://apache.googlesource.com/openwhisk-deploy-kube/+/4a9637d938f479b9e1036f991d7d54b1bf74683c/README.md#initial-setup https://github.com/apache/openwhisk-deploy-kube/blob/master/README.md#initial-setup
-
-    ## Once the deployment is ready, you can test it with 
-    # helm test $owdev -n $openwhisk --cleanup
+    # kubectl label nodes --all openwhisk-role=invoker # for single node in the cluster
 }
 
 set_pyfile(){
