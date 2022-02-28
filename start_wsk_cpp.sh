@@ -222,82 +222,63 @@ set_openwhisk(){
 set_pyfile(){
 ### TODO: re-write py file
 echo '
-def main(args):
-    name = args.get("name", "stranger")
-    greeting = "Hello " + name + "!"
-    print({"greeting": greeting})
-    return {"greeting": greeting}
+import example
 if __name__ == "__main__":
-    main({ 
-        "name": "alex"})
-    print(main)' > hello.py
+    example.multiply(2,4)' > hello.py
 }
 
 set_cmakefile(){
 echo 'cmake_minimum_required(VERSION 3.13)
-project(example)
-
-set(CMAKE_CXX_STANDARD 14)
-
+project(example LANGUAGES CXX)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
 include(FetchContent)
-FetchContent_Declare(
-    pybind11
-    GIT_REPOSITORY https://github.com/pybind/pybind11.git
-    GIT_TAG        v2.6.2
-    GIT_SHALLOW    TRUE
-)
-FetchContent_MakeAvailable(pybind11)
-
+	FetchContent_Declare(
+		pybind11
+		GIT_REPOSITORY https://github.com/pybind/pybind11.git
+		GIT_TAG        v2.6.2
+		GIT_SHALLOW    TRUE
+	)
+	FetchContent_MakeAvailable(pybind11)
 pybind11_add_module(example example.cpp)
-target_compile_features(example PUBLIC cxx_std_14)
-set_target_properties(example PROPERTIES SUFFIX ".so")
+set(CMAKE_SHARED_MODULE_PREFIX "")
+if(PYBIND_LIB)
+    add_definitions(-DPYBIND)
+
+    find_package(PythonLibs)
+    include_directories(${PYTHON_INCLUDE_DIRS})
+    target_include_directories(example PUBLIC include)
+endif()
 '>CMakeLists.txt
 }
 
 set_cppfile(){
-echo '#include <pybind11/embed.h>
+echo '#include <pybind11/pybind11.h>
 int multiply(int i, int j) {
     return i * j;
 }
+
+namespace py = pybind11;
 
 PYBIND11_MODULE(example, m) {
     m.doc() = "pybind11 example plugin"; // optional module docstring
     m.def("multiply", &multiply, "A function which multiplies two numbers");
 }'>example.cpp
+
+echo '#include <pybind11/pybind11.h>
+namespace py = pybind11
+'>example.h
 }
 
 set_dockerfile(){
-echo "FROM debian:buster AS base
+echo "FROM openwhisk/python3aiaction:latest AS runtime
 
-RUN set -ex;         \
-    apt-get update;  \
-    apt-get install -y libzmq5
-
-FROM base AS builder
-
-RUN set -ex;   \
-    apt-get update && apt-get -y upgrade && \
-    apt-get install -y g++ curl  libzmq3-dev libblkid-dev e2fslibs-dev libboost-all-dev libaudit-dev python-pybind11;   \
-    mkdir -p /usr/src
-
-COPY . /usr/src/example
-
-RUN set -ex;              \
-    apt-get install -y python-pybind11; \
-    apt-get install -y cmake git; git clone https://gitlab.kitware.com/cmake/cmake.git; cd cmake; git checkout tags/v3.14.7; mkdir build; cd build; cmake ..; cmake --build .; cpack -G DEB; apt remove -y cmake-data; dpkg -i cmake-3.14.7-Linux-x86_64.deb; \
-    cd /usr/src/example/example_func;  \
-    cmake -D python_version=3.5 . ; make
-
-FROM openwhisk/python3aiaction:latest AS runtime
-
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /usr/bin/cmake /usr/bin/cmake
-COPY --from=builder /usr/src/example/example_func /usr/local/bin
-
-RUN export PATH=\$PATH:/usr/local/bin; \
-    chown -R 1033:2000 /actionProxy/actionproxy.py /usr/local/bin; \
-    cd /usr/lib/python3.5/; ln -s /usr/local/bin/example.so
-ENV PYTHONPATH /usr/lib/python3.5:/usr/lib/python2.7/dist-packages:/usr/lib/python3.5/dist-packages:/usr/local/bin
+RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends --no-install-suggests apt-utils build-essential cmake git
+COPY . /notebooks
+RUN git clone https://gitlab.kitware.com/cmake/cmake.git; cd cmake; git checkout tags/v3.14.7; \
+    mkdir build; cd build; cmake ..; cmake --build .; cpack -G DEB; apt remove -y cmake-data; dpkg -i cmake-3.14.7-Linux-x86_64.deb; \
+    cd /notebooks;  \
+    cmake . ; \
+    make
 " > $dockerfile.Dockerfile
 }
 
