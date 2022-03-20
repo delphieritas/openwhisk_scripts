@@ -275,27 +275,17 @@ echo "FROM debian:buster AS base
 RUN set -ex;         \
     apt-get update;  \
     apt-get install -y libzmq5
-
 FROM base AS builder
 RUN set -ex;   \
     apt-get update; apt-get -y upgrade; \
     apt-get install -y g++ curl  libzmq3-dev libblkid-dev e2fslibs-dev libboost-all-dev libaudit-dev
-
 FROM openwhisk/python3aiaction:latest AS runtime
-
 COPY --from=builder /usr/local/bin /usr/local/bin
 RUN set -ex;   \
-    apt-get update; apt-get -y upgrade; 
-    
-RUN apt-get install -y --no-install-recommends --no-install-suggests apt-utils build-essential cmake git
+    apt-get update; apt-get install -y --no-install-recommends --no-install-suggests apt-utils build-essential cmake git
 
-COPY cmake /cmake/
-# RUN git clone https://gitlab.kitware.com/cmake/cmake.git
-# cd cmake; git checkout tags/v3.14.7;
-RUN cd /cmake;  rm -rf build; mkdir build;  cd build; cmake -DCMAKE_USE_OPENSSL=OFF ..; cmake --build .; cpack -G DEB; apt remove -y cmake-data; dpkg -i cmake-3.14.7-Linux-x86_64.deb
-
+RUN git clone https://gitlab.kitware.com/cmake/cmake.git; cd cmake; git checkout tags/v3.14.7; rm -rf build; mkdir build;  cd build; cmake -DCMAKE_USE_OPENSSL=OFF ..; cmake --build .; cpack -G DEB; apt remove -y cmake-data; dpkg -i cmake-3.14.7-Linux-x86_64.deb
 COPY example_draft/. /notebooks/ 
-
 RUN cd /notebooks;  \
     cmake . ; \
     make
