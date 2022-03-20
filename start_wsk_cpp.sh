@@ -225,6 +225,13 @@ echo '
 import example
 if __name__ == "__main__":
     example.multiply(2,4)' > hello.py
+echo 'def __bootstrap__():
+   global __bootstrap__, __loader__, __file__
+   import sys, pkg_resources, imp
+   __file__ = pkg_resources.resource_filename(__name__,'hello_world.so')
+   __loader__ = None; del __bootstrap__, __loader__
+   imp.load_dynamic(__name__,__file__)
+__bootstrap__()' > example.py
 }
 
 set_cmakefile(){
@@ -275,25 +282,30 @@ echo "FROM debian:buster AS base
 RUN set -ex;         \
     apt-get update;  \
     apt-get install -y libzmq5
+
 FROM base AS builder
 RUN set -ex;   \
-    apt-get update; apt-get -y upgrade; \
-    apt-get install -y g++ curl  libzmq3-dev libblkid-dev e2fslibs-dev libboost-all-dev libaudit-dev
-FROM openwhisk/python3aiaction:latest AS runtime
-COPY --from=builder /usr/local/bin /usr/local/bin
-RUN set -ex;   \
-    apt-get update; apt-get install -y --no-install-recommends --no-install-suggests apt-utils build-essential cmake git
+    apt-get update; \
+    apt-get install -y g++ curl libzmq3-dev libblkid-dev e2fslibs-dev libboost-all-dev libaudit-dev apt-utils build-essential; \
+    apt-get install -y --no-install-recommends --no-install-suggests cmake git; \
+    git clone https://gitlab.kitware.com/cmake/cmake.git; \
+    cd cmake; git checkout tags/v3.14.7; rm -rf build; \
+    mkdir build; cd build; \
+    cmake -DCMAKE_USE_OPENSSL=OFF ..; cmake --build .; cpack -G DEB; apt remove -y cmake-data; dpkg -i cmake-3.14.7-Linux-x86_64.deb
 
-RUN git clone https://gitlab.kitware.com/cmake/cmake.git; cd cmake; git checkout tags/v3.14.7; rm -rf build; mkdir build;  cd build; cmake -DCMAKE_USE_OPENSSL=OFF ..; cmake --build .; cpack -G DEB; apt remove -y cmake-data; dpkg -i cmake-3.14.7-Linux-x86_64.deb
 COPY example_draft/. /notebooks/ 
 RUN cd /notebooks;  \
     cmake . ; \
     make
+
+FROM openwhisk/python3aiaction:latest AS runtime
+COPY --from=builder /notebooks /notebooks
+RUN mv example.cpython-37m-x86_64-linux-gnu.so example.so
 " > $dockerfile.Dockerfile
 
 # This dockerfile is for single-stage building
 echo "FROM openwhisk/python3aiaction:latest AS runtime
-RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends --no-install-suggests apt-utils build-essential cmake git
+RUN apt-get update && apt-get -y upgrade && apt-get install -y --no-install-recommends --no-install-suggests cmake git
 COPY . /notebooks
 RUN git clone https://gitlab.kitware.com/cmake/cmake.git; cd cmake; git checkout tags/v3.14.7; \
     mkdir build; cd build; cmake ..; cmake --build .; cpack -G DEB; apt remove -y cmake-data; dpkg -i cmake-3.14.7-Linux-x86_64.deb; \
