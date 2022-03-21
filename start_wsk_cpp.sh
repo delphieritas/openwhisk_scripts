@@ -296,7 +296,7 @@ RUN set -ex;   \
     cmake -DCMAKE_USE_OPENSSL=OFF ..; cmake --build .; cpack -G DEB; apt remove -y cmake-data; dpkg -i cmake-3.14.7-Linux-x86_64.deb
     
 RUN wget --no-check-certificate https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tar.xz; \
- tar xf Python-3.5.0.tar.xz; cd /Python-3.5.0; ./configure --enable-optimizations; make; make install
+ tar xf Python-3.5.0.tar.xz; cd /Python-3.5.0; ./configure --enable-shared; make; make install; ./configure --enable-optimizations; make; make install
 
 COPY example_draft/. /notebooks/ 
 RUN cd /notebooks;  \
@@ -305,7 +305,7 @@ RUN cd /notebooks;  \
 
 FROM openwhisk/python3aiaction:latest AS runtime
 COPY --from=builder /notebooks /notebooks
-RUN mv example.cpython-37m-x86_64-linux-gnu.so example.so
+RUN mv example.*.so example.so
 " > $dockerfile.Dockerfile
 
 # This dockerfile is for single-stage building
