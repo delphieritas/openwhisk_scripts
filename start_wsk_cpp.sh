@@ -236,6 +236,7 @@ __bootstrap__()' > example.py
 
 set_cmakefile(){
 echo 'cmake_minimum_required(VERSION 3.13)
+set(PYBIND11_PYTHON_VERSION 3.5 CACHE STRING "")
 project(example LANGUAGES CXX)
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 include(FetchContent)
@@ -286,12 +287,16 @@ RUN set -ex;         \
 FROM base AS builder
 RUN set -ex;   \
     apt-get update; \
-    apt-get install -y g++ curl libzmq3-dev libblkid-dev e2fslibs-dev libboost-all-dev libaudit-dev apt-utils build-essential; \
+    apt-get install -y g++ wget libzmq3-dev libblkid-dev e2fslibs-dev libboost-all-dev libaudit-dev apt-utils build-essential; \
     apt-get install -y --no-install-recommends --no-install-suggests cmake git; \
+    git config --global http.sslverify false;\
     git clone https://gitlab.kitware.com/cmake/cmake.git; \
     cd cmake; git checkout tags/v3.14.7; rm -rf build; \
     mkdir build; cd build; \
     cmake -DCMAKE_USE_OPENSSL=OFF ..; cmake --build .; cpack -G DEB; apt remove -y cmake-data; dpkg -i cmake-3.14.7-Linux-x86_64.deb
+    
+RUN wget --no-check-certificate https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tar.xz; \
+ tar xf Python-3.5.0.tar.xz; cd /Python-3.5.0; ./configure --enable-optimizations; make; make install
 
 COPY example_draft/. /notebooks/ 
 RUN cd /notebooks;  \
