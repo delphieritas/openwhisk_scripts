@@ -75,6 +75,45 @@ nodes:
       containerPort: 31001
 # - role: worker
 " > k8s.yaml
+
+# for horizontal_scaling: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/
+echo "apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpp-dev
+spec:
+  selector:
+    matchLabels:
+      run: cpp-dev
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: cpp-dev
+    spec:
+      containers:
+      - name: cpp-dev
+        image: delphieritas/cpp-dev
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 500m
+          requests:
+            cpu: 200m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cpp-dev
+  labels:
+    run: cpp-dev
+spec:
+  ports:
+  - port: 80
+  selector:
+    run: cpp-dev" > cpp-dev.yaml
+
 }
 
 set_kind(){
@@ -165,16 +204,55 @@ create_k8scluster(){
     cp -i /etc/kubernetes/admin.conf $HOME/admin.conf
     chown $(id -u):$(id -g) $HOME/admin.conf 
     export KUBECONFIG=$HOME/admin.conf
+    kubectl config view
     kind create cluster --name $cluster_name --config $PWD/k8s.yaml 
 
     kubectl get services 
-    kubectl cluster-info --context kind-$cluster_name
+    # `docker ps` to obtain name and server, e.g. cpp-cluster, https://127.0.0.1:35097
+    kubectl cluster-info --context kind-$cluster_name  
     kubectl get nodes # kind get clusters
 
     docker ps -a
     # docker logs -f <container_id>
     # kubectl logs owdev-init-couchdb-rcqp2 -n $openwhisk
     # kubectl describe pod owdev-init-couchdb-2zhwh --namespace=$openwhisk
+    
+    # list for each namespace: https://kubernetes.io/docs/tasks/access-application-cluster/list-all-running-container-images/
+    kubectl get pods --all-namespaces # wsk -i list
+
+### TODO route clusters https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster-services/
+
+kubeadm token create --print-join-command  # kubeadm join 127.0.0.1:35097 --token 55ipr7.uujsj16zw118mr4x --discovery-token-ca-cert-hash sha256:65ae82e2e1cde98a44ddde346250101db1ec87a18950acb3dd0c07f3a6bc13ee
+
+### TODO: add config file `config-demo` into directory
+
+# kubectl config --kubeconfig=config-demo set-cluster cpp-cluster --server=https://127.0.0.1:35097 --insecure-skip-tls-verify
+# kubectl config --kubeconfig=config-demo set-credentials experimenter --username=exp --password=some-password
+
+
+### view config file `config-demo`
+### kubectl config --kubeconfig=config-demo view
+### kubectl config view
+
+  
+}
+
+horizontal_autoscaling(){
+# https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/
+# install metrics-server: https://github.com/kubernetes-sigs/metrics-server#deployment
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+# kubectl command: https://kubernetes.io/docs/reference/generated/kubectl/kubectl-commands#autoscale
+#  kubectl autoscale (-f FILENAME | TYPE NAME | TYPE/NAME) [--min=MINPODS] --max=MAXPODS [--cpu-percent=CPU]
+# resource type: deployment
+set_k8s_yaml
+
+kubectl apply -f cpp-dev.yaml
+kubectl autoscale deployment cpp-dev --cpu-percent=5 --min=2 --max=5
+
+kubectl get hpa
+
+kubectl get hpa cpp-dev --watch
 }
 
 deploy_wsk_cluster(){
@@ -184,6 +262,8 @@ deploy_wsk_cluster(){
     set_wsk_yaml
     helm install $owdev $openwhisk/openwhisk -n $openwhisk --create-namespace -f wsk.yaml 
     # helm ls # helm status $owdev -n $openwhisk
+    
+    ### access cluster https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/
 }
 
 set_tools(){
